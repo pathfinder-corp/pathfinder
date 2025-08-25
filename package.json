@@ -1,0 +1,39 @@
+{
+  "name": "pathfinder",
+  "version": "0.0.1",
+  "description": "",
+  "homepage": "https://github.com/pathfinder-corp/pathfinder#readme",
+  "bugs": {
+    "url": "https://github.com/pathfinder-corp/pathfinder/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/pathfinder-corp/pathfinder.git"
+  },
+  "license": "MIT",
+  "contributors": [
+    "Phuong Dang <powoftech@gmail.com>",
+    "Lam Quoc Hung <hlam812003@gmail.com>"
+  ],
+  "private": true,
+  "scripts": {
+    "dev": "concurrently -n \"Web,API\" \"npm run dev --workspace=apps/web\" \"npm run start:dev --workspace=apps/api\"",
+    "build": "concurrently -n \"Web,API\" \"npm run build --workspace=apps/web\" \"npm run build --workspace=apps/api\"",
+    "start": "concurrently -n \"Web,API\" \"npm run start --workspace=apps/web\" \"npm run start --workspace=apps/api\"",
+    "lint": "concurrently -n \"Web,API\" \"npm run lint --workspace=apps/web\" \"npm run lint --workspace=apps/api\"",
+    "format": "prettier --write \"apps/**/*.{js,jsx,ts,tsx,json,css,scss,md}\""
+  },
+  "devDependencies": {
+    "concurrently": "^9.2.0",
+    "prettier": "^3.6.2",
+    "prettier-plugin-organize-imports": "^4.2.0",
+    "prettier-plugin-tailwindcss": "^0.6.14"
+  },
+  "workspaces": [
+    "apps/*"
+  ],
+  "engines": {
+    "node": "22.x"
+  },
+  "packageManager": "npm@11.5.2"
+}
