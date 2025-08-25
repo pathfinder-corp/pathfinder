@@ -17,10 +17,10 @@
   ],
   "private": true,
   "scripts": {
-    "dev": "concurrently -n \"Web,API\" \"npm run dev --workspace=apps/web\" \"npm run start:dev --workspace=apps/api\"",
-    "build": "concurrently -n \"Web,API\" \"npm run build --workspace=apps/web\" \"npm run build --workspace=apps/api\"",
-    "start": "concurrently -n \"Web,API\" \"npm run start --workspace=apps/web\" \"npm run start --workspace=apps/api\"",
-    "lint": "concurrently -n \"Web,API\" \"npm run lint --workspace=apps/web\" \"npm run lint --workspace=apps/api\"",
+    "dev": "concurrently --colors -c \"blue,green\" -n \"Web,API\" \"npm run dev --workspace=apps/web\" \"npm run start:dev --workspace=apps/api\"",
+    "build": "concurrently --colors -c \"blue,green\" -n \"Web,API\" \"npm run build --workspace=apps/web\" \"npm run build --workspace=apps/api\"",
+    "start": "concurrently --colors -c \"blue,green\" -n \"Web,API\" \"npm run start --workspace=apps/web\" \"npm run start --workspace=apps/api\"",
+    "lint": "concurrently --colors -c \"blue,green\" -n \"Web,API\" \"npm run lint --workspace=apps/web\" \"npm run lint --workspace=apps/api\"",
     "format": "prettier --write \"apps/**/*.{js,jsx,ts,tsx,json,css,scss,md}\""
   },
   "devDependencies": {
