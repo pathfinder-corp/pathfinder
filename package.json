@@ -1,0 +1,23 @@
+{
+  "name": "pathfinder",
+  "private": true,
+  "license": "MIT",
+  "scripts": {
+    "dev": "concurrently -n \"Web,API\" \"npm run dev -w apps/web\" \"npm run dev -w apps/api\"",
+    "build": "concurrently -n \"Web,API\" \"npm run build -w apps/web\" \"npm run build -w apps/api\"",
+    "start": "concurrently -n \"Web,API\" \"npm run start -w apps/web\" \"npm run start -w apps/api\"",
+    "lint": "concurrently -n \"Web,API\" \"npm run lint -w apps/web\" \"npm run lint -w apps/api\"",
+    "lint:fix": "concurrently -n \"Web,API\" \"npm run lint:fix -w apps/web\" \"npm run lint:fix -w apps/api\"",
+    "format": "concurrently -n \"Web,API\" \"npm run format -w apps/web\" \"npm run format -w apps/api\""
+  },
+  "devDependencies": {
+    "concurrently": "^9.2.1"
+  },
+  "workspaces": [
+    "apps/*"
+  ],
+  "engines": {
+    "node": ">=22"
+  },
+  "packageManager": "npm@11.6.1"
+}
