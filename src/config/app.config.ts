@@ -6,12 +6,12 @@ export default () => ({
     username: process.env.DATABASE_USER,
     password: process.env.DATABASE_PASSWORD,
     database: process.env.DATABASE_NAME
+  },
+  jwt: {
+    secret: process.env.JWT_SECRET,
+    expiresIn: process.env.JWT_EXPIRATION || '7d'
+  },
+  ai: {
+    geminiKey: process.env.GEMINI_API_KEY
   }
-  // jwt: {
-  //   secret: process.env.JWT_SECRET,
-  //   expiresIn: process.env.JWT_EXPIRATION
-  // },
-  // ai: {
-  //   geminiKey: process.env.GEMINI_API_KEY
-  // }
 })
