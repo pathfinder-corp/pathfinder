@@ -68,4 +68,10 @@ export class User {
 
   @UpdateDateColumn()
   updatedAt: Date
+
+  @Column({ nullable: true })
+  lastLoginAt?: Date
+
+  @Column({ nullable: true })
+  lastLogoutAt?: Date
 }

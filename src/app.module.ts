@@ -5,6 +5,8 @@ import { AppController } from './app.controller'
 import { AppService } from './app.service'
 import appConfig from './config/app.config'
 import { getDatabaseConfig } from './config/database.config'
+import { AuthModule } from './modules/auth/auth.module'
+import { MailModule } from './modules/mail/mail.module'
 import { UsersModule } from './modules/users/users.module'
 
 @Module({
@@ -18,7 +20,9 @@ import { UsersModule } from './modules/users/users.module'
       inject: [ConfigService],
       useFactory: getDatabaseConfig
     }),
-    UsersModule
+    UsersModule,
+    AuthModule,
+    MailModule
   ],
   controllers: [AppController],
   providers: [AppService]
