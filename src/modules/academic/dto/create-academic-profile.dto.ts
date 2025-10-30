@@ -3,7 +3,6 @@ import {
   IsArray,
   IsEnum,
   IsNumber,
-  IsObject,
   IsOptional,
   IsString,
   Max,
@@ -83,13 +82,9 @@ export class CreateAcademicProfileDto {
   @IsOptional()
   targetUniversity?: string
 
-  @ApiPropertyOptional()
-  @IsObject()
+  @ApiPropertyOptional({ type: [String] })
+  @IsArray()
+  @IsString({ each: true })
   @IsOptional()
-  extracurricularActivities?: {
-    activity: string
-    role: string
-    duration: string
-  }[]
+  extracurricularActivities?: string[]
 }
-

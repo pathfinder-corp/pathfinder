@@ -70,12 +70,8 @@ export class AcademicProfile {
   @Column({ nullable: true })
   targetUniversity?: string
 
-  @Column({ type: 'jsonb', nullable: true })
-  extracurricularActivities?: {
-    activity: string
-    role: string
-    duration: string
-  }[]
+  @Column({ type: 'text', array: true, default: [] })
+  extracurricularActivities: string[]
 
   @CreateDateColumn()
   createdAt: Date
@@ -83,4 +79,3 @@ export class AcademicProfile {
   @UpdateDateColumn()
   updatedAt: Date
 }
-

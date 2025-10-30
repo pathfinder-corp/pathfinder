@@ -15,16 +15,19 @@ Module quản lý academic profiles, courses, và enrollments cho hệ thống P
 ## 🗄️ Entities
 
 ### AcademicProfile
+
 - Lưu thông tin học tập của student
 - Fields: currentLevel, GPA, major, interests, strengths, etc.
 - One-to-One relationship với User
 
 ### Course
+
 - Thông tin về các khóa học
 - Fields: name, category, level, skills, prerequisites
 - Có thể filter by category/level
 
 ### Enrollment
+
 - Quản lý việc đăng ký khóa học
 - Track progress (0-100%)
 - Status: enrolled, in_progress, completed, dropped
@@ -34,16 +37,19 @@ Module quản lý academic profiles, courses, và enrollments cho hệ thống P
 ## 🔐 Authorization
 
 ### Student Role
+
 - ✅ Create/update own academic profile
 - ✅ Browse courses
 - ✅ Enroll in courses
 - ✅ Track own progress
 
 ### Counselor Role
+
 - ✅ View all student profiles
 - ✅ View student enrollments
 
 ### Admin Role
+
 - ✅ Full access
 - ✅ CRUD courses
 - ✅ Manage all profiles
@@ -199,4 +205,3 @@ enrolled → in_progress → completed
 2. Progress tự động set status = completed khi đạt 100%
 3. Không thể drop course đã completed
 4. Admin có thể deactivate course bằng `isActive: false`
-

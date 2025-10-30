@@ -65,12 +65,8 @@ export class AcademicProfileResponseDto {
   targetUniversity?: string
 
   @Expose()
-  @ApiPropertyOptional()
-  extracurricularActivities?: {
-    activity: string
-    role: string
-    duration: string
-  }[]
+  @ApiProperty({ type: [String] })
+  extracurricularActivities: string[]
 
   @Expose()
   @ApiProperty()
@@ -80,4 +76,3 @@ export class AcademicProfileResponseDto {
   @ApiProperty()
   updatedAt: Date
 }
-
