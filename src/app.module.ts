@@ -5,6 +5,7 @@ import { AppController } from './app.controller'
 import { AppService } from './app.service'
 import appConfig from './config/app.config'
 import { getDatabaseConfig } from './config/database.config'
+import { AcademicModule } from './modules/academic/academic.module'
 import { AuthModule } from './modules/auth/auth.module'
 import { MailModule } from './modules/mail/mail.module'
 import { UsersModule } from './modules/users/users.module'
@@ -22,7 +23,8 @@ import { UsersModule } from './modules/users/users.module'
     }),
     UsersModule,
     AuthModule,
-    MailModule
+    MailModule,
+    AcademicModule
   ],
   controllers: [AppController],
   providers: [AppService]
