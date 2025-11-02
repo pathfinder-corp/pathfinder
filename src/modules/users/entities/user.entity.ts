@@ -76,6 +76,4 @@ export class User {
   @Column({ nullable: true })
   lastLogoutAt?: Date
 
-  @OneToOne('AcademicProfile', 'user')
-  academicProfile?: any
 }
