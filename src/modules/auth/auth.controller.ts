@@ -16,6 +16,9 @@ import {
   ApiResponse,
   ApiTags
 } from '@nestjs/swagger'
+
+import { ForgotPasswordDto } from '../users/dto/forgot-password.dto'
+import { ResetPasswordDto } from '../users/dto/reset-password.dto'
 import { User } from '../users/entities/user.entity'
 import { AuthService } from './auth.service'
 import { CurrentUser } from './decorators/current-user.decorator'
@@ -23,8 +26,6 @@ import { AuthResponseDto } from './dto/auth-response.dto'
 import { LoginDto } from './dto/login.dto'
 import { RegisterDto } from './dto/register.dto'
 import { JwtAuthGuard } from './guards/jwt-auth.guard'
-import { ForgotPasswordDto } from '../users/dto/forgot-password.dto'
-import { ResetPasswordDto } from '../users/dto/reset-password.dto'
 
 @ApiTags('Authentication')
 @Controller('auth')
@@ -61,8 +62,8 @@ export class AuthController {
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Logout user' })
-  @ApiResponse({ 
-    status: 200, 
+  @ApiResponse({
+    status: 200,
     description: 'Logged out successfully',
     schema: {
       properties: {

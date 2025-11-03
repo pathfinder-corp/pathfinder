@@ -23,7 +23,91 @@
 
 ## Description
 
-[Nest](https://github.com/nestjs/nest) framework TypeScript starter repository.
+AI-powered academic and career pathway recommendation API built with [NestJS](https://github.com/nestjs/nest). It exposes authentication, user management, and now an AI-driven roadmap generator powered by Google Gemini (Gemini 2.5 Flash).
+
+## Roadmap Generator API
+
+The roadmap generator creates actionable learning plans tailored to a user's target topic, experience level, pacing preference, and constraints. It integrates with Google Gemini via the `@google/genai` SDK.
+
+### Environment Variables
+
+Add the following variables to your `.env` file:
+
+| Variable                  | Required | Default            | Description                                 |
+| ------------------------- | -------- | ------------------ | ------------------------------------------- |
+| `GENAI_API_KEY`           | ✅       | –                  | Google Gemini API key.                      |
+| `GENAI_MODEL`             | ❌       | `gemini-2.5-flash` | Gemini model name to use.                   |
+| `GENAI_TEMPERATURE`       | ❌       | `0.4`              | Controls creativity (0-2).                  |
+| `GENAI_TOP_P`             | ❌       | `0.95`             | Nucleus sampling parameter (0-1).           |
+| `GENAI_TOP_K`             | ❌       | `32`               | Limits candidate tokens considered (1-200). |
+| `GENAI_MAX_OUTPUT_TOKENS` | ❌       | `32768`            | Maximum tokens in the response (1-8192).    |
+
+### Endpoint
+
+- `POST /roadmaps`
+  - Requires a valid JWT (`Authorization: Bearer <token>`)
+  - Body payload:
+
+```json
+{
+  "topic": "Full-stack web developer",
+  "experienceLevel": "beginner",
+  "learningPace": "balanced",
+  "background": "Computer science graduate with basic JavaScript",
+  "targetOutcome": "Break into a junior front-end role",
+  "timeframe": "6 months",
+  "preferences": "Prefer project-based learning with open resources"
+}
+```
+
+### Response
+
+```json
+{
+  "topic": "Full-stack web developer",
+  "experienceLevel": "beginner",
+  "learningPace": "balanced",
+  "timeframe": "6 months",
+  "summary": {
+    "recommendedCadence": "5-8 hours per week",
+    "recommendedDuration": "5-6 months",
+    "successTips": ["Track weekly goals", "Publish projects for feedback"],
+    "additionalNotes": "Emphasize fundamentals before frameworks."
+  },
+  "phases": [
+    {
+      "title": "Foundations",
+      "outcome": "Comfortably build responsive websites",
+      "estimatedDuration": "6 weeks",
+      "steps": [
+        {
+          "title": "Master semantic HTML and CSS",
+          "description": "Learn layout systems, accessibility, and responsive design.",
+          "estimatedDuration": "2 weeks",
+          "keyActivities": [
+            "Build a personal site",
+            "Complete CSS Grid exercises"
+          ],
+          "resources": [
+            {
+              "type": "Video Course",
+              "title": "freeCodeCamp Responsive Web Design",
+              "url": "https://www.freecodecamp.org/learn/",
+              "description": "Project-led curriculum for HTML, CSS, and accessibility."
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "milestones": [
+    {
+      "title": "Launch responsive personal site",
+      "successCriteria": "Site passes Lighthouse accessibility score of 90+."
+    }
+  ]
+}
+```
 
 ## Project setup
 

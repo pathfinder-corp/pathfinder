@@ -3,7 +3,6 @@ import {
   Column,
   CreateDateColumn,
   Entity,
-  OneToOne,
   PrimaryGeneratedColumn,
   UpdateDateColumn
 } from 'typeorm'
@@ -75,5 +74,4 @@ export class User {
 
   @Column({ nullable: true })
   lastLogoutAt?: Date
-
 }

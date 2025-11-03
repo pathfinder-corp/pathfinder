@@ -10,23 +10,29 @@ export class MailService {
   constructor(private readonly configService: ConfigService) {
     const mailConfig = this.configService.get('mail')
 
-    this.transporter = nodemailer.createTransport({
-      host: mailConfig.host,
-      port: mailConfig.port,
-      secure: mailConfig.secure,
-      auth: {
-        user: mailConfig.auth.user,
-        pass: mailConfig.auth.pass
-      }
-    })
+    if (mailConfig?.host && mailConfig?.auth?.user && mailConfig?.auth?.pass) {
+      this.transporter = nodemailer.createTransport({
+        host: mailConfig.host,
+        port: mailConfig.port,
+        secure: mailConfig.secure,
+        auth: {
+          user: mailConfig.auth.user,
+          pass: mailConfig.auth.pass
+        }
+      })
 
-    this.transporter.verify((error) => {
-      if (error) {
-        this.logger.error('Email service connection failed:', error)
-      } else {
-        this.logger.log('Email service is ready')
-      }
-    })
+      this.transporter.verify((error) => {
+        if (error) {
+          this.logger.error('Email service connection failed:', error)
+        } else {
+          this.logger.log('Email service is ready')
+        }
+      })
+    } else {
+      this.logger.warn(
+        'Mail service is not fully configured. Emails will not be sent.'
+      )
+    }
   }
 
   async sendPasswordResetEmail(
@@ -39,6 +45,13 @@ export class MailService {
     const mailFrom = this.configService.get('mail.from')
 
     const html = this.getPasswordResetEmailTemplate(userName, resetLink)
+
+    if (!this.transporter) {
+      this.logger.warn(
+        'Attempted to send password reset email without a configured transporter'
+      )
+      return
+    }
 
     try {
       await this.transporter.sendMail({
@@ -274,6 +287,13 @@ export class MailService {
         </body>
       </html>
     `
+
+    if (!this.transporter) {
+      this.logger.warn(
+        'Attempted to send password reset success email without a configured transporter'
+      )
+      return
+    }
 
     try {
       await this.transporter.sendMail({

@@ -1,22 +1,33 @@
-import { BadRequestException, Injectable, UnauthorizedException } from '@nestjs/common'
+import {
+  BadRequestException,
+  Injectable,
+  Logger,
+  UnauthorizedException
+} from '@nestjs/common'
 import { ConfigService } from '@nestjs/config'
 import { JwtService } from '@nestjs/jwt'
 import { InjectRepository } from '@nestjs/typeorm'
 import * as bcrypt from 'bcrypt'
+import { plainToInstance } from 'class-transformer'
 import { randomUUID } from 'crypto'
 import { Repository } from 'typeorm'
+
 import { MailService } from '../mail/mail.service'
-import { PasswordResetToken } from '../users/entities/password-reset-token.entity'
-import { UsersService } from '../users/users.service'
-import { AuthResponseDto } from './dto/auth-response.dto'
 import { ForgotPasswordDto } from '../users/dto/forgot-password.dto'
 import { ResetPasswordDto } from '../users/dto/reset-password.dto'
+import { UserResponseDto } from '../users/dto/user-response.dto'
+import { PasswordResetToken } from '../users/entities/password-reset-token.entity'
+import { User } from '../users/entities/user.entity'
+import { UsersService } from '../users/users.service'
+import { AuthResponseDto } from './dto/auth-response.dto'
 import { LoginDto } from './dto/login.dto'
 import { RegisterDto } from './dto/register.dto'
 import { JwtPayload } from './strategies/jwt.strategy'
 
 @Injectable()
 export class AuthService {
+  private readonly logger = new Logger(AuthService.name)
+
   constructor(
     private readonly usersService: UsersService,
     private readonly jwtService: JwtService,
@@ -37,12 +48,7 @@ export class AuthService {
 
     const accessToken = this.jwtService.sign(payload)
 
-    return {
-      accessToken,
-      tokenType: 'Bearer',
-      expiresIn: this.configService.get<string>('jwt.expiresIn') || '7d',
-      user
-    }
+    return this.buildAuthResponse(user, accessToken)
   }
 
   async login(loginDto: LoginDto): Promise<AuthResponseDto> {
@@ -74,22 +80,19 @@ export class AuthService {
     const accessToken = this.jwtService.sign(payload)
 
     user.lastLoginAt = new Date()
-    await this.usersService.update(user.id, { lastLoginAt: user.lastLoginAt } as any)
+    await this.usersService.update(user.id, {
+      lastLoginAt: user.lastLoginAt
+    } as any)
 
-    return {
-      accessToken,
-      tokenType: 'Bearer',
-      expiresIn: this.configService.get<string>('jwt.expiresIn') || '7d',
-      user
-    }
+    return this.buildAuthResponse(user, accessToken)
   }
 
   async logout(userId: string): Promise<{ message: string }> {
     const user = await this.usersService.findOne(userId)
-    
+
     if (user) {
-      await this.usersService.update(userId, { 
-        lastLogoutAt: new Date() 
+      await this.usersService.update(userId, {
+        lastLogoutAt: new Date()
       } as any)
     }
 
@@ -98,7 +101,9 @@ export class AuthService {
     }
   }
 
-  async forgotPassword(forgotPasswordDto: ForgotPasswordDto): Promise<{ message: string }> {
+  async forgotPassword(
+    forgotPasswordDto: ForgotPasswordDto
+  ): Promise<{ message: string }> {
     const { email } = forgotPasswordDto
 
     const user = await this.usersService.findByEmail(email)
@@ -111,7 +116,8 @@ export class AuthService {
 
     const resetToken = randomUUID()
 
-    const expiryMinutes = this.configService.get<number>('passwordResetTokenExpiry') || 60
+    const expiryMinutes =
+      this.configService.get<number>('passwordResetTokenExpiry') || 60
     const expiresAt = new Date()
     expiresAt.setMinutes(expiresAt.getMinutes() + expiryMinutes)
 
@@ -136,7 +142,13 @@ export class AuthService {
         user.firstName
       )
     } catch (error) {
-      console.error('Failed to send password reset email:', error)
+      if (error instanceof Error) {
+        this.logger.error('Failed to send password reset email', error.stack)
+      } else {
+        this.logger.error(
+          `Failed to send password reset email: ${JSON.stringify(error)}`
+        )
+      }
     }
 
     return {
@@ -144,7 +156,9 @@ export class AuthService {
     }
   }
 
-  async resetPassword(resetPasswordDto: ResetPasswordDto): Promise<{ message: string }> {
+  async resetPassword(
+    resetPasswordDto: ResetPasswordDto
+  ): Promise<{ message: string }> {
     const { token, newPassword } = resetPasswordDto
 
     const resetToken = await this.passwordResetTokenRepository.findOne({
@@ -183,7 +197,16 @@ export class AuthService {
         resetToken.user.firstName
       )
     } catch (error) {
-      console.error('Failed to send success email:', error)
+      if (error instanceof Error) {
+        this.logger.error(
+          'Failed to send password reset success email',
+          error.stack
+        )
+      } else {
+        this.logger.error(
+          `Failed to send password reset success email: ${JSON.stringify(error)}`
+        )
+      }
     }
 
     return {
@@ -195,7 +218,9 @@ export class AuthService {
     return await this.usersService.findOne(userId)
   }
 
-  async verifyResetToken(token: string): Promise<{ valid: boolean; message?: string }> {
+  async verifyResetToken(
+    token: string
+  ): Promise<{ valid: boolean; message?: string }> {
     const resetToken = await this.passwordResetTokenRepository.findOne({
       where: { token }
     })
@@ -213,5 +238,19 @@ export class AuthService {
     }
 
     return { valid: true }
+  }
+
+  private buildAuthResponse(user: User, accessToken: string): AuthResponseDto {
+    const expiresIn = this.configService.get<string>('jwt.expiresIn') || '7d'
+    const safeUser = plainToInstance(UserResponseDto, user, {
+      excludeExtraneousValues: true
+    })
+
+    return {
+      accessToken,
+      tokenType: 'Bearer',
+      expiresIn,
+      user: safeUser
+    }
   }
 }

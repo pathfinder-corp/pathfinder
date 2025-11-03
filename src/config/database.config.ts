@@ -3,15 +3,39 @@ import { TypeOrmModuleOptions } from '@nestjs/typeorm'
 
 export const getDatabaseConfig = (
   configService: ConfigService
-): TypeOrmModuleOptions => ({
-  type: 'postgres',
-  host: configService.get<string>('database.host'),
-  port: configService.get<number>('database.port'),
-  username: configService.get<string>('database.username'),
-  password: configService.get<string>('database.password'),
-  database: configService.get<string>('database.database'),
-  entities: [__dirname + '/../**/*.entity{.ts,.js}'],
-  synchronize: configService.get<string>('NODE_ENV') === 'development',
-  logging: configService.get<string>('NODE_ENV') === 'development',
-  ssl: configService.get<string>('NODE_ENV') === 'production' ? { rejectUnauthorized: false } : false
-})
+): TypeOrmModuleOptions => {
+  const nodeEnv = configService.get<string>('nodeEnv') ?? 'development'
+  const isProduction = nodeEnv === 'production'
+  const synchronize =
+    configService.get<boolean>('database.synchronize') ?? false
+  const logging =
+    configService.get<boolean>('database.logging') ?? nodeEnv !== 'production'
+  const useSsl = configService.get<boolean>('database.ssl') ?? false
+  const rejectUnauthorized =
+    configService.get<boolean>('database.sslRejectUnauthorized') ?? false
+
+  if (isProduction && synchronize) {
+    throw new Error(
+      'DATABASE_SYNCHRONIZE must be disabled in production environments.'
+    )
+  }
+
+  return {
+    type: 'postgres',
+    host: configService.getOrThrow<string>('database.host'),
+    port: configService.getOrThrow<number>('database.port'),
+    username: configService.getOrThrow<string>('database.username'),
+    password: configService.getOrThrow<string>('database.password'),
+    database: configService.getOrThrow<string>('database.database'),
+    autoLoadEntities: true,
+    synchronize,
+    logging,
+    ssl: useSsl
+      ? {
+          rejectUnauthorized
+        }
+      : false,
+    migrations: ['dist/migrations/*.js'],
+    migrationsRun: false
+  }
+}
