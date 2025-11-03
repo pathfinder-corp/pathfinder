@@ -17,6 +17,10 @@ import {
   LearningPace
 } from './dto/generate-roadmap.dto'
 import {
+  RoadmapInsightRequestDto,
+  RoadmapInsightResponseDto
+} from './dto/roadmap-insight.dto'
+import {
   RoadmapContentDto,
   RoadmapResponseDto
 } from './dto/roadmap-response.dto'
@@ -49,6 +53,8 @@ Rules:
 - Reference reputable, preferably free or low-cost resources when possible.
 - Align steps to progressively develop mastery toward the stated goal.
 - Highlight checkpoints that confirm the learner is ready to advance.`
+
+const INSIGHT_SYSTEM_PROMPT = `You are an expert mentor helping learners understand and apply their personalized roadmap. Provide grounded, encouraging, and precise answers that reference the supplied roadmap data. If information is missing or unclear, say so and suggest what the learner could clarify.`
 
 @Injectable()
 export class RoadmapsService {
@@ -181,6 +187,59 @@ export class RoadmapsService {
     return this.toRoadmapResponse(roadmap)
   }
 
+  async generateRoadmapInsight(
+    userId: string,
+    roadmapId: string,
+    insightDto: RoadmapInsightRequestDto
+  ): Promise<RoadmapInsightResponseDto> {
+    const roadmap = await this.roadmapsRepository.findOne({
+      where: { id: roadmapId, userId }
+    })
+
+    if (!roadmap) {
+      throw new NotFoundException('Roadmap not found')
+    }
+
+    const prompt = this.buildInsightPrompt(roadmap, insightDto)
+
+    try {
+      const response = await this.client.models.generateContent({
+        model: this.modelName,
+        contents: prompt,
+        config: {
+          ...this.generationDefaults,
+          responseMimeType: 'text/plain',
+          systemInstruction: INSIGHT_SYSTEM_PROMPT
+        }
+      })
+
+      const textResponse = response.text?.trim()
+
+      if (!textResponse) {
+        throw new InternalServerErrorException(
+          'The language model returned an empty response.'
+        )
+      }
+
+      return {
+        answer: this.sanitizeModelText(textResponse)
+      }
+    } catch (error) {
+      this.logger.error(
+        'Failed to generate roadmap insight',
+        error instanceof Error ? error.stack : undefined
+      )
+
+      if (error instanceof InternalServerErrorException) {
+        throw error
+      }
+
+      throw new InternalServerErrorException(
+        'Unable to generate an insight at this time. Please try again later.'
+      )
+    }
+  }
+
   private buildRequestContext(dto: GenerateRoadmapDto): RoadmapRequestContext {
     return {
       topic: dto.topic,
@@ -307,5 +366,50 @@ Ensure all strings use double quotes and the JSON is strictly valid.`
 
   private formatEnumValue(value: ExperienceLevel | LearningPace): string {
     return value.replace(/-/g, ' ')
+  }
+
+  private sanitizeModelText(payload: string): string {
+    const trimmed = payload.trim()
+    const fencedMatch = trimmed.match(/^```[a-zA-Z0-9]*\n([\s\S]*?)\n```$/)
+
+    if (fencedMatch) {
+      return fencedMatch[1].trim()
+    }
+
+    return trimmed
+  }
+
+  private buildInsightPrompt(
+    roadmap: Roadmap,
+    dto: RoadmapInsightRequestDto
+  ): string {
+    const roadmapSnapshot = {
+      topic: roadmap.topic,
+      experienceLevel: roadmap.experienceLevel ?? null,
+      learningPace: roadmap.learningPace ?? null,
+      timeframe: roadmap.timeframe ?? null,
+      summary: roadmap.summary,
+      phases: roadmap.phases,
+      milestones: roadmap.milestones ?? null,
+      requestContext: roadmap.requestContext ?? null
+    }
+
+    const focusHints = [
+      dto.phaseTitle ? `Phase focus: ${dto.phaseTitle}` : null,
+      dto.stepTitle ? `Step focus: ${dto.stepTitle}` : null
+    ].filter((value): value is string => Boolean(value))
+
+    const focusBlock =
+      focusHints.length > 0
+        ? `\nFocus hints:\n${focusHints
+            .map((line) => `- ${line}`)
+            .join('\n')}\n`
+        : ''
+
+    return `Provide a clear, encouraging, and actionable explanation that helps the learner act on their roadmap. Reference specific roadmap details when relevant and avoid inventing new milestones or steps. If the roadmap does not contain enough information to answer, say so and recommend what the learner could clarify.\n\nRoadmap context (JSON):\n${JSON.stringify(
+      roadmapSnapshot,
+      null,
+      2
+    )}\n${focusBlock}\nLearner question:\n${dto.question}`
   }
 }

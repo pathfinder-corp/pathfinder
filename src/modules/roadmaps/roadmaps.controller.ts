@@ -21,6 +21,10 @@ import { CurrentUser } from '../auth/decorators/current-user.decorator'
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard'
 import { User } from '../users/entities/user.entity'
 import { GenerateRoadmapDto } from './dto/generate-roadmap.dto'
+import {
+  RoadmapInsightRequestDto,
+  RoadmapInsightResponseDto
+} from './dto/roadmap-insight.dto'
 import { RoadmapResponseDto } from './dto/roadmap-response.dto'
 import { RoadmapsService } from './roadmaps.service'
 
@@ -76,5 +80,28 @@ export class RoadmapsController {
     @Param('id') roadmapId: string
   ): Promise<RoadmapResponseDto> {
     return await this.roadmapsService.getRoadmapById(user.id, roadmapId)
+  }
+
+  @Post(':id/insight')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary:
+      'Ask a follow-up question about a roadmap using the full roadmap as context'
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Insight generated successfully',
+    type: RoadmapInsightResponseDto
+  })
+  async generateRoadmapInsight(
+    @CurrentUser() user: User,
+    @Param('id') roadmapId: string,
+    @Body() insightDto: RoadmapInsightRequestDto
+  ): Promise<RoadmapInsightResponseDto> {
+    return await this.roadmapsService.generateRoadmapInsight(
+      user.id,
+      roadmapId,
+      insightDto
+    )
   }
 }
