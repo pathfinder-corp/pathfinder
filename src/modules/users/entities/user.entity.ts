@@ -3,9 +3,12 @@ import {
   Column,
   CreateDateColumn,
   Entity,
+  OneToMany,
   PrimaryGeneratedColumn,
   UpdateDateColumn
 } from 'typeorm'
+
+import { Roadmap } from '../../roadmaps/entities/roadmap.entity'
 
 export enum UserRole {
   STUDENT = 'student',
@@ -74,4 +77,7 @@ export class User {
 
   @Column({ nullable: true })
   lastLogoutAt?: Date
+
+  @OneToMany(() => Roadmap, (roadmap) => roadmap.user)
+  roadmaps?: Roadmap[]
 }

@@ -93,7 +93,7 @@ export class RoadmapSummaryDto {
   additionalNotes?: string
 }
 
-export class RoadmapResponseDto {
+export class RoadmapContentDto {
   @ApiProperty({ example: 'Full-stack web developer' })
   topic!: string
 
@@ -117,4 +117,17 @@ export class RoadmapResponseDto {
   @ApiPropertyOptional({ type: () => [RoadmapMilestoneDto] })
   @Type(() => RoadmapMilestoneDto)
   milestones?: RoadmapMilestoneDto[]
+
+  // Additional properties may be defined in extending DTOs
+}
+
+export class RoadmapResponseDto extends RoadmapContentDto {
+  @ApiProperty({ example: 'b8f82d24-5f0d-4b66-9df2-4388f080d2bf' })
+  id!: string
+
+  @ApiProperty({ example: '2025-01-15T10:30:00.000Z' })
+  createdAt!: string
+
+  @ApiProperty({ example: '2025-01-15T10:30:00.000Z' })
+  updatedAt!: string
 }
