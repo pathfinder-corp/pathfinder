@@ -29,6 +29,7 @@ import {
   RoadmapRequestContext,
   RoadmapSummary
 } from './entities/roadmap.entity'
+import { RoadmapContentPolicyService } from './roadmap-content-policy.service'
 
 type GenerationSettings = Pick<
   GenerationConfig,
@@ -52,9 +53,16 @@ Rules:
 - Provide realistic time estimates and hands-on activities.
 - Reference reputable, preferably free or low-cost resources when possible.
 - Align steps to progressively develop mastery toward the stated goal.
-- Highlight checkpoints that confirm the learner is ready to advance.`
+- Highlight checkpoints that confirm the learner is ready to advance.
+- Decline any request that is not focused on educational growth or that touches sensitive or harmful topics (violence, weapons, self-harm, adult content, hate, or illegal activities). Respond with: "I'm sorry, but I can only help with educational learning plans."
+- Never produce content that facilitates dangerous, hateful, or illegal activities.`
 
-const INSIGHT_SYSTEM_PROMPT = `You are an expert mentor helping learners understand and apply their personalized roadmap. Provide grounded, encouraging, and precise answers that reference the supplied roadmap data. If information is missing or unclear, say so and suggest what the learner could clarify.`
+const INSIGHT_SYSTEM_PROMPT = `You are an expert mentor helping learners understand and apply their personalized roadmap. Provide grounded, encouraging, and precise answers that reference the supplied roadmap data. If information is missing or unclear, say so and suggest what the learner could clarify.
+
+Safety rules:
+- Only address educational or skill-building questions related to the roadmap.
+- If the learner asks about sensitive or harmful topics (violence, weapons, self-harm, adult content, hate, or illegal activities), respond with: "I'm sorry, but I can only help with educational learning plans."
+- Do not generate guidance that could cause harm or break laws.`
 
 @Injectable()
 export class RoadmapsService {
@@ -66,7 +74,8 @@ export class RoadmapsService {
   constructor(
     private readonly configService: ConfigService,
     @InjectRepository(Roadmap)
-    private readonly roadmapsRepository: Repository<Roadmap>
+    private readonly roadmapsRepository: Repository<Roadmap>,
+    private readonly contentPolicy: RoadmapContentPolicyService
   ) {
     const apiKey = this.configService.get<string>('genai.apiKey')
 
@@ -91,6 +100,8 @@ export class RoadmapsService {
     user: User,
     generateRoadmapDto: GenerateRoadmapDto
   ): Promise<RoadmapResponseDto> {
+    this.contentPolicy.validateRoadmapRequest(generateRoadmapDto)
+
     const prompt = this.buildPrompt(generateRoadmapDto)
 
     try {
@@ -122,13 +133,15 @@ export class RoadmapsService {
         exposeUnsetFields: false
       }) as RoadmapContentPlain
 
+      console.log(roadmapPlain)
+
       if (
         !roadmapPlain.summary ||
         !Array.isArray(roadmapPlain.phases) ||
         roadmapPlain.phases.length === 0
       ) {
         throw new InternalServerErrorException(
-          'The language model returned an invalid roadmap structure.'
+          'The language model returned an empty response.'
         )
       }
 
@@ -199,6 +212,10 @@ export class RoadmapsService {
     if (!roadmap) {
       throw new NotFoundException('Roadmap not found')
     }
+
+    this.contentPolicy.validateInsightRequest(insightDto, {
+      roadmapTopic: roadmap.topic
+    })
 
     const prompt = this.buildInsightPrompt(roadmap, insightDto)
 
