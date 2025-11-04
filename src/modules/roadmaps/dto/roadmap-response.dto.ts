@@ -125,6 +125,9 @@ export class RoadmapResponseDto extends RoadmapContentDto {
   @ApiProperty({ example: 'b8f82d24-5f0d-4b66-9df2-4388f080d2bf' })
   id!: string
 
+  @ApiProperty({ example: false })
+  isSharedWithAll!: boolean
+
   @ApiProperty({ example: '2025-01-15T10:30:00.000Z' })
   createdAt!: string
 

@@ -64,6 +64,7 @@ Add the following variables to your `.env` file:
 
 ```json
 {
+  "id": "b8f82d24-5f0d-4b66-9df2-4388f080d2bf",
   "topic": "Full-stack web developer",
   "experienceLevel": "beginner",
   "learningPace": "balanced",
@@ -105,9 +106,45 @@ Add the following variables to your `.env` file:
       "title": "Launch responsive personal site",
       "successCriteria": "Site passes Lighthouse accessibility score of 90+."
     }
-  ]
+  ],
+  "isSharedWithAll": false,
+  "createdAt": "2025-01-15T10:30:00.000Z",
+  "updatedAt": "2025-01-15T10:30:00.000Z"
 }
 ```
+
+### Sharing Roadmaps
+
+Once a roadmap is generated, owners can share view-only access with specific registered users or make it discoverable to anyone who knows the roadmap ID.
+
+- `GET /roadmaps/:id/share`
+  - Returns the current sharing configuration.
+  - Response shape:
+
+    ```json
+    {
+      "isSharedWithAll": false,
+      "sharedWithUserIds": ["user-id-1", "user-id-2"]
+    }
+    ```
+
+- `POST /roadmaps/:id/share`
+  - Updates the sharing configuration.
+  - Body payload (`shareWithAll` and `userIds` are both optional; omit a field to keep the current value):
+
+    ```json
+    {
+      "shareWithAll": true,
+      "userIds": ["user-id-1", "user-id-2"]
+    }
+    ```
+
+  - Responds with the updated configuration shown above.
+
+- `DELETE /roadmaps/:id/share/:userId`
+  - Revokes access for an explicitly shared user.
+
+Shared recipients can view a roadmap via `GET /roadmaps/:id`, but only the owner can modify, delete, or request AI insights for it. Publicly shared roadmaps (`isSharedWithAll: true`) remain hidden from listings; a viewer still needs the exact roadmap ID.
 
 ## Project setup
 

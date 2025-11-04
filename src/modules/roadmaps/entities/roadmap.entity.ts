@@ -4,12 +4,14 @@ import {
   Entity,
   JoinColumn,
   ManyToOne,
+  OneToMany,
   PrimaryGeneratedColumn,
   UpdateDateColumn
 } from 'typeorm'
 
 import { User } from '../../users/entities/user.entity'
 import { ExperienceLevel, LearningPace } from '../dto/generate-roadmap.dto'
+import { RoadmapShare } from './roadmap-share.entity'
 
 export type RoadmapResource = {
   type: string
@@ -100,6 +102,12 @@ export class Roadmap {
 
   @Column({ type: 'jsonb', nullable: true })
   requestContext?: RoadmapRequestContext | null
+
+  @Column({ name: 'is_shared_with_all', type: 'boolean', default: false })
+  isSharedWithAll!: boolean
+
+  @OneToMany(() => RoadmapShare, (share) => share.roadmap)
+  shares?: RoadmapShare[]
 
   @CreateDateColumn({ name: 'created_at' })
   createdAt!: Date

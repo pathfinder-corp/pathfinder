@@ -27,6 +27,10 @@ import {
   RoadmapInsightResponseDto
 } from './dto/roadmap-insight.dto'
 import { RoadmapResponseDto } from './dto/roadmap-response.dto'
+import {
+  RoadmapShareStateDto,
+  ShareRoadmapDto
+} from './dto/share-roadmap.dto'
 import { RoadmapsService } from './roadmaps.service'
 
 @ApiTags('Roadmaps')
@@ -123,6 +127,59 @@ export class RoadmapsController {
       user.id,
       roadmapId,
       insightDto
+    )
+  }
+
+  @Get(':id/share')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Retrieve sharing settings for a roadmap' })
+  @ApiResponse({
+    status: 200,
+    description: 'Roadmap sharing settings retrieved successfully',
+    type: RoadmapShareStateDto
+  })
+  async getRoadmapShareState(
+    @CurrentUser() user: User,
+    @Param('id') roadmapId: string
+  ): Promise<RoadmapShareStateDto> {
+    return await this.roadmapsService.getShareState(user.id, roadmapId)
+  }
+
+  @Post(':id/share')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: 'Share a roadmap with specific users or all registered users'
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Roadmap sharing settings updated successfully',
+    type: RoadmapShareStateDto
+  })
+  async shareRoadmap(
+    @CurrentUser() user: User,
+    @Param('id') roadmapId: string,
+    @Body() shareDto: ShareRoadmapDto
+  ): Promise<RoadmapShareStateDto> {
+    return await this.roadmapsService.updateShareSettings(
+      user.id,
+      roadmapId,
+      shareDto
+    )
+  }
+
+  @Delete(':id/share/:userId')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  @ApiOperation({ summary: 'Revoke roadmap access from a shared user' })
+  @ApiResponse({ status: 204, description: 'Roadmap access revoked successfully' })
+  async revokeRoadmapShare(
+    @CurrentUser() user: User,
+    @Param('id') roadmapId: string,
+    @Param('userId') sharedWithUserId: string
+  ): Promise<void> {
+    await this.roadmapsService.revokeShare(
+      user.id,
+      roadmapId,
+      sharedWithUserId
     )
   }
 }

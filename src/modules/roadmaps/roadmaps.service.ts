@@ -1,5 +1,6 @@
 import { GoogleGenAI, type GenerationConfig } from '@google/genai'
 import {
+  BadRequestException,
   Injectable,
   InternalServerErrorException,
   Logger,
@@ -8,7 +9,7 @@ import {
 import { ConfigService } from '@nestjs/config'
 import { InjectRepository } from '@nestjs/typeorm'
 import { instanceToPlain, plainToInstance } from 'class-transformer'
-import { Repository } from 'typeorm'
+import { In, Repository } from 'typeorm'
 
 import { User } from '../users/entities/user.entity'
 import {
@@ -29,7 +30,12 @@ import {
   RoadmapRequestContext,
   RoadmapSummary
 } from './entities/roadmap.entity'
+import { RoadmapShare } from './entities/roadmap-share.entity'
 import { RoadmapContentPolicyService } from './roadmap-content-policy.service'
+import {
+  RoadmapShareStateDto,
+  ShareRoadmapDto
+} from './dto/share-roadmap.dto'
 
 type GenerationSettings = Pick<
   GenerationConfig,
@@ -75,6 +81,10 @@ export class RoadmapsService {
     private readonly configService: ConfigService,
     @InjectRepository(Roadmap)
     private readonly roadmapsRepository: Repository<Roadmap>,
+    @InjectRepository(RoadmapShare)
+    private readonly roadmapSharesRepository: Repository<RoadmapShare>,
+    @InjectRepository(User)
+    private readonly usersRepository: Repository<User>,
     private readonly contentPolicy: RoadmapContentPolicyService
   ) {
     const apiKey = this.configService.get<string>('genai.apiKey')
@@ -155,7 +165,8 @@ export class RoadmapsService {
           summary: roadmapPlain.summary,
           phases: roadmapPlain.phases,
           milestones: roadmapPlain.milestones ?? null,
-          requestContext: this.buildRequestContext(generateRoadmapDto)
+          requestContext: this.buildRequestContext(generateRoadmapDto),
+          isSharedWithAll: false
         })
       )
 
@@ -190,18 +201,38 @@ export class RoadmapsService {
     roadmapId: string
   ): Promise<RoadmapResponseDto> {
     const roadmap = await this.roadmapsRepository.findOne({
-      where: { id: roadmapId, userId }
+      where: { id: roadmapId }
     })
 
     if (!roadmap) {
       throw new NotFoundException('Roadmap not found')
     }
 
+    const isOwner = roadmap.userId === userId
+
+    if (!isOwner) {
+      if (!roadmap.isSharedWithAll) {
+        const hasAccess = await this.roadmapSharesRepository.exist({
+          where: {
+            roadmapId,
+            sharedWithUserId: userId
+          }
+        })
+
+        if (!hasAccess) {
+          throw new NotFoundException('Roadmap not found')
+        }
+      }
+    }
+
     return this.toRoadmapResponse(roadmap)
   }
 
   async deleteRoadmap(userId: string, roadmapId: string): Promise<void> {
-    const result = await this.roadmapsRepository.delete({ id: roadmapId, userId })
+    const result = await this.roadmapsRepository.delete({
+      id: roadmapId,
+      userId
+    })
 
     if (!result.affected) {
       throw new NotFoundException('Roadmap not found')
@@ -269,6 +300,144 @@ export class RoadmapsService {
     }
   }
 
+  async getShareState(
+    ownerId: string,
+    roadmapId: string
+  ): Promise<RoadmapShareStateDto> {
+    const roadmap = await this.roadmapsRepository.findOne({
+      where: { id: roadmapId, userId: ownerId }
+    })
+
+    if (!roadmap) {
+      throw new NotFoundException('Roadmap not found')
+    }
+
+    return await this.buildRoadmapShareState(roadmapId, roadmap.isSharedWithAll)
+  }
+
+  async updateShareSettings(
+    ownerId: string,
+    roadmapId: string,
+    shareDto: ShareRoadmapDto
+  ): Promise<RoadmapShareStateDto> {
+    const roadmap = await this.roadmapsRepository.findOne({
+      where: { id: roadmapId, userId: ownerId }
+    })
+
+    if (!roadmap) {
+      throw new NotFoundException('Roadmap not found')
+    }
+
+    if (typeof shareDto.shareWithAll === 'boolean') {
+      roadmap.isSharedWithAll = shareDto.shareWithAll
+    }
+
+    if (shareDto.userIds !== undefined) {
+      const sanitizedUserIds = Array.from(
+        new Set(
+          shareDto.userIds
+            .map((value) => value.trim())
+            .filter((id) => id && id !== ownerId)
+        )
+      )
+
+      if (shareDto.userIds.length > 0 && sanitizedUserIds.length === 0) {
+        throw new BadRequestException(
+          'At least one recipient must be a different user.'
+        )
+      }
+
+      if (sanitizedUserIds.length > 0) {
+        const users = await this.usersRepository.find({
+          where: { id: In(sanitizedUserIds) }
+        })
+
+        if (users.length !== sanitizedUserIds.length) {
+          throw new NotFoundException('One or more users could not be found.')
+        }
+      }
+
+      const existingShares = await this.roadmapSharesRepository.find({
+        where: { roadmapId },
+        select: ['id', 'sharedWithUserId']
+      })
+
+      const targetIds = new Set(sanitizedUserIds)
+      const existingMap = new Map(
+        existingShares.map((share) => [share.sharedWithUserId, share.id])
+      )
+
+      const sharesToRemove = existingShares
+        .filter((share) => !targetIds.has(share.sharedWithUserId))
+        .map((share) => share.id)
+
+      if (sharesToRemove.length > 0) {
+        await this.roadmapSharesRepository.delete(sharesToRemove)
+      }
+
+      const sharesToAdd = sanitizedUserIds.filter(
+        (userId) => !existingMap.has(userId)
+      )
+
+      if (sharesToAdd.length > 0) {
+        await this.roadmapSharesRepository.save(
+          sharesToAdd.map((sharedWithUserId) =>
+            this.roadmapSharesRepository.create({
+              roadmapId,
+              sharedWithUserId
+            })
+          )
+        )
+      }
+    }
+
+    await this.roadmapsRepository.save(roadmap)
+
+    return await this.buildRoadmapShareState(roadmapId, roadmap.isSharedWithAll)
+  }
+
+  async revokeShare(
+    ownerId: string,
+    roadmapId: string,
+    sharedWithUserId: string
+  ): Promise<void> {
+    const roadmapExists = await this.roadmapsRepository.exist({
+      where: { id: roadmapId, userId: ownerId }
+    })
+
+    if (!roadmapExists) {
+      throw new NotFoundException('Roadmap not found')
+    }
+
+    const result = await this.roadmapSharesRepository.delete({
+      roadmapId,
+      sharedWithUserId
+    })
+
+    if (!result.affected) {
+      throw new NotFoundException('Shared user not found for roadmap')
+    }
+  }
+
+  private async buildRoadmapShareState(
+    roadmapId: string,
+    isSharedWithAll: boolean
+  ): Promise<RoadmapShareStateDto> {
+    const shareRecords = await this.roadmapSharesRepository.find({
+      where: { roadmapId },
+      select: ['sharedWithUserId']
+    })
+
+    const sharedWithUserIds = shareRecords
+      .map((share) => share.sharedWithUserId)
+      .sort((a, b) => (a > b ? 1 : a < b ? -1 : 0))
+
+    return {
+      isSharedWithAll,
+      sharedWithUserIds
+    }
+  }
+
   private buildRequestContext(dto: GenerateRoadmapDto): RoadmapRequestContext {
     return {
       topic: dto.topic,
@@ -293,6 +462,7 @@ export class RoadmapsService {
         summary: roadmap.summary,
         phases: roadmap.phases,
         milestones: roadmap.milestones ?? undefined,
+        isSharedWithAll: roadmap.isSharedWithAll,
         createdAt: roadmap.createdAt.toISOString(),
         updatedAt: roadmap.updatedAt.toISOString()
       },

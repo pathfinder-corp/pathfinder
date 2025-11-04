@@ -7,18 +7,24 @@ import { ConfigService } from '@nestjs/config'
 import { Repository } from 'typeorm'
 
 import {
-  Roadmap,
-  RoadmapMilestone,
-  RoadmapPhase,
-  RoadmapSummary
-} from './entities/roadmap.entity'
-import { RoadmapsService } from './roadmaps.service'
-import {
   ExperienceLevel,
   GenerateRoadmapDto,
   LearningPace
 } from './dto/generate-roadmap.dto'
 import { RoadmapInsightRequestDto } from './dto/roadmap-insight.dto'
+import {
+  RoadmapShareStateDto,
+  ShareRoadmapDto
+} from './dto/share-roadmap.dto'
+import {
+  Roadmap,
+  RoadmapMilestone,
+  RoadmapPhase,
+  RoadmapSummary
+} from './entities/roadmap.entity'
+import { RoadmapShare } from './entities/roadmap-share.entity'
+import { RoadmapsService } from './roadmaps.service'
+import { User } from '../users/entities/user.entity'
 
 const generateContentMock = jest.fn()
 
@@ -62,6 +68,7 @@ describe('RoadmapsService', () => {
     requestContext: {
       topic: 'Full-stack web developer'
     },
+    isSharedWithAll: false,
     createdAt: new Date('2025-01-01T00:00:00.000Z'),
     updatedAt: new Date('2025-01-01T00:00:00.000Z'),
     user: undefined as unknown as Roadmap['user']
@@ -73,6 +80,17 @@ describe('RoadmapsService', () => {
     create: jest.Mock
     save: jest.Mock
     delete: jest.Mock
+    exist: jest.Mock
+  }
+  let roadmapSharesRepository: {
+    find: jest.Mock
+    delete: jest.Mock
+    save: jest.Mock
+    create: jest.Mock
+    exist: jest.Mock
+  }
+  let usersRepository: {
+    find: jest.Mock
   }
   let contentPolicy: {
     validateRoadmapRequest: jest.Mock
@@ -101,8 +119,24 @@ describe('RoadmapsService', () => {
       findOne: jest.fn(),
       create: jest.fn(),
       save: jest.fn(),
-      delete: jest.fn()
+      delete: jest.fn(),
+      exist: jest.fn()
     }
+
+    roadmapSharesRepository = {
+      find: jest.fn(),
+      delete: jest.fn(),
+      save: jest.fn(),
+      create: jest.fn((payload) => payload),
+      exist: jest.fn()
+    }
+    roadmapSharesRepository.find.mockResolvedValue([])
+    roadmapSharesRepository.save.mockImplementation(async (entities) => entities)
+
+    usersRepository = {
+      find: jest.fn()
+    }
+    usersRepository.find.mockResolvedValue([])
 
     contentPolicy = {
       validateRoadmapRequest: jest.fn(),
@@ -112,6 +146,8 @@ describe('RoadmapsService', () => {
     service = new RoadmapsService(
       buildConfigService(),
       repository as unknown as Repository<Roadmap>,
+      roadmapSharesRepository as unknown as Repository<RoadmapShare>,
+      usersRepository as unknown as Repository<User>,
       contentPolicy as unknown as any
     )
   })
@@ -299,6 +335,7 @@ describe('RoadmapsService', () => {
       expect(repository.save).toHaveBeenCalled()
       expect(result.id).toBe('roadmap-123')
       expect(result.topic).toBe('Full-stack web developer')
+      expect(result.isSharedWithAll).toBe(false)
     })
 
     it('propagates validation errors from the content policy for roadmap generation', async () => {
@@ -312,6 +349,285 @@ describe('RoadmapsService', () => {
 
       expect(generateContentMock).not.toHaveBeenCalled()
       expect(repository.save).not.toHaveBeenCalled()
+    })
+  })
+
+  describe('getRoadmapById', () => {
+    it('returns the roadmap for its owner', async () => {
+      const ownerRoadmap = { ...baseRoadmap, userId: 'owner-1' }
+      repository.findOne.mockResolvedValue(ownerRoadmap)
+
+      const result = await service.getRoadmapById('owner-1', ownerRoadmap.id)
+
+      expect(result.id).toBe(ownerRoadmap.id)
+      expect(roadmapSharesRepository.exist).not.toHaveBeenCalled()
+    })
+
+    it('allows access for explicitly shared users', async () => {
+      const sharedRoadmap = {
+        ...baseRoadmap,
+        userId: 'owner-1',
+        isSharedWithAll: false
+      }
+      repository.findOne.mockResolvedValue(sharedRoadmap)
+      roadmapSharesRepository.exist.mockResolvedValue(true)
+
+      const result = await service.getRoadmapById('viewer-1', sharedRoadmap.id)
+
+      expect(result.id).toBe(sharedRoadmap.id)
+      expect(roadmapSharesRepository.exist).toHaveBeenCalledWith({
+        where: {
+          roadmapId: sharedRoadmap.id,
+          sharedWithUserId: 'viewer-1'
+        }
+      })
+    })
+
+    it('allows access when the roadmap is shared with all users', async () => {
+      const sharedWithAll = {
+        ...baseRoadmap,
+        userId: 'owner-1',
+        isSharedWithAll: true
+      }
+      repository.findOne.mockResolvedValue(sharedWithAll)
+
+      const result = await service.getRoadmapById('viewer-2', sharedWithAll.id)
+
+      expect(result.id).toBe(sharedWithAll.id)
+      expect(roadmapSharesRepository.exist).not.toHaveBeenCalled()
+    })
+
+    it('throws NotFoundException when the requester lacks access', async () => {
+      const privateRoadmap = {
+        ...baseRoadmap,
+        userId: 'owner-1',
+        isSharedWithAll: false
+      }
+      repository.findOne.mockResolvedValue(privateRoadmap)
+      roadmapSharesRepository.exist.mockResolvedValue(false)
+
+      await expect(
+        service.getRoadmapById('viewer-3', privateRoadmap.id)
+      ).rejects.toBeInstanceOf(NotFoundException)
+    })
+  })
+
+  describe('sharing state', () => {
+    describe('getShareState', () => {
+      it('returns the current sharing configuration', async () => {
+        const roadmap = {
+          ...baseRoadmap,
+          userId: 'owner-1',
+          isSharedWithAll: true
+        }
+        repository.findOne.mockResolvedValue(roadmap)
+        roadmapSharesRepository.find.mockResolvedValueOnce([
+          { sharedWithUserId: 'user-b' } as RoadmapShare,
+          { sharedWithUserId: 'user-a' } as RoadmapShare
+        ])
+
+        const result = await service.getShareState('owner-1', roadmap.id)
+
+        const expected: RoadmapShareStateDto = {
+          isSharedWithAll: true,
+          sharedWithUserIds: ['user-a', 'user-b']
+        }
+
+        expect(result).toEqual(expected)
+      })
+
+      it('throws NotFoundException when the roadmap does not exist', async () => {
+        repository.findOne.mockResolvedValue(null)
+
+        await expect(
+          service.getShareState('owner-1', 'missing-roadmap')
+        ).rejects.toBeInstanceOf(NotFoundException)
+      })
+    })
+
+    describe('updateShareSettings', () => {
+      it('updates recipients and toggles public sharing', async () => {
+        const roadmap = {
+          ...baseRoadmap,
+          userId: 'owner-1',
+          isSharedWithAll: false
+        }
+        repository.findOne.mockResolvedValue(roadmap)
+        usersRepository.find.mockResolvedValue([
+          { id: 'user-a' } as User,
+          { id: 'user-b' } as User
+        ])
+        roadmapSharesRepository.find
+          .mockResolvedValueOnce([
+            { id: 'share-1', sharedWithUserId: 'user-x' } as RoadmapShare
+          ])
+          .mockResolvedValueOnce([
+            { sharedWithUserId: 'user-a' } as RoadmapShare,
+            { sharedWithUserId: 'user-b' } as RoadmapShare
+          ])
+        roadmapSharesRepository.delete.mockResolvedValue({ affected: 1 })
+
+        const dto: ShareRoadmapDto = {
+          shareWithAll: true,
+          userIds: ['user-a', 'user-b']
+        }
+
+        const result = await service.updateShareSettings(
+          'owner-1',
+          roadmap.id,
+          dto
+        )
+
+        expect(repository.save).toHaveBeenCalledWith(
+          expect.objectContaining({ isSharedWithAll: true })
+        )
+        expect(roadmapSharesRepository.delete).toHaveBeenCalledWith(['share-1'])
+        expect(roadmapSharesRepository.save).toHaveBeenCalledWith([
+          {
+            roadmapId: roadmap.id,
+            sharedWithUserId: 'user-a'
+          },
+          {
+            roadmapId: roadmap.id,
+            sharedWithUserId: 'user-b'
+          }
+        ])
+        expect(result).toEqual<RoadmapShareStateDto>({
+          isSharedWithAll: true,
+          sharedWithUserIds: ['user-a', 'user-b']
+        })
+      })
+
+      it('removes explicit shares when the list is empty', async () => {
+        const roadmap = {
+          ...baseRoadmap,
+          userId: 'owner-1',
+          isSharedWithAll: false
+        }
+        repository.findOne.mockResolvedValue(roadmap)
+        roadmapSharesRepository.find
+          .mockResolvedValueOnce([
+            { id: 'share-1', sharedWithUserId: 'user-a' } as RoadmapShare
+          ])
+          .mockResolvedValueOnce([])
+        roadmapSharesRepository.delete.mockResolvedValue({ affected: 1 })
+
+        const result = await service.updateShareSettings(
+          'owner-1',
+          roadmap.id,
+          { userIds: [] }
+        )
+
+        expect(roadmapSharesRepository.delete).toHaveBeenCalledWith(['share-1'])
+        expect(usersRepository.find).not.toHaveBeenCalled()
+        expect(result).toEqual<RoadmapShareStateDto>({
+          isSharedWithAll: false,
+          sharedWithUserIds: []
+        })
+      })
+
+      it('rejects updates that only include the owner as a recipient', async () => {
+        const roadmap = {
+          ...baseRoadmap,
+          userId: 'owner-1',
+          isSharedWithAll: false
+        }
+        repository.findOne.mockResolvedValue(roadmap)
+
+        await expect(
+          service.updateShareSettings('owner-1', roadmap.id, {
+            userIds: ['owner-1']
+          })
+        ).rejects.toBeInstanceOf(BadRequestException)
+
+        expect(roadmapSharesRepository.find).not.toHaveBeenCalled()
+      })
+
+      it('throws when any recipient cannot be found', async () => {
+        const roadmap = {
+          ...baseRoadmap,
+          userId: 'owner-1',
+          isSharedWithAll: false
+        }
+        repository.findOne.mockResolvedValue(roadmap)
+        usersRepository.find.mockResolvedValue([{ id: 'user-a' } as User])
+
+        await expect(
+          service.updateShareSettings('owner-1', roadmap.id, {
+            userIds: ['user-a', 'user-b']
+          })
+        ).rejects.toBeInstanceOf(NotFoundException)
+
+        expect(roadmapSharesRepository.find).not.toHaveBeenCalled()
+      })
+
+      it('allows toggling shareWithAll without changing recipients', async () => {
+        const roadmap = {
+          ...baseRoadmap,
+          userId: 'owner-1',
+          isSharedWithAll: true
+        }
+        repository.findOne.mockResolvedValue(roadmap)
+        roadmapSharesRepository.find.mockResolvedValueOnce([])
+
+        const result = await service.updateShareSettings('owner-1', roadmap.id, {
+          shareWithAll: false
+        })
+
+        expect(repository.save).toHaveBeenCalledWith(
+          expect.objectContaining({ isSharedWithAll: false })
+        )
+        expect(roadmapSharesRepository.delete).not.toHaveBeenCalled()
+        expect(result).toEqual<RoadmapShareStateDto>({
+          isSharedWithAll: false,
+          sharedWithUserIds: []
+        })
+      })
+
+      it('throws NotFoundException when the roadmap is missing', async () => {
+        repository.findOne.mockResolvedValue(null)
+
+        await expect(
+          service.updateShareSettings('owner-1', 'missing-roadmap', {
+            userIds: ['user-a']
+          })
+        ).rejects.toBeInstanceOf(NotFoundException)
+      })
+    })
+  })
+
+  describe('revokeShare', () => {
+    it('removes an existing share entry', async () => {
+      repository.exist.mockResolvedValue(true)
+      roadmapSharesRepository.delete.mockResolvedValue({ affected: 1 })
+
+      await expect(
+        service.revokeShare('owner-1', 'roadmap-123', 'user-a')
+      ).resolves.toBeUndefined()
+
+      expect(roadmapSharesRepository.delete).toHaveBeenCalledWith({
+        roadmapId: 'roadmap-123',
+        sharedWithUserId: 'user-a'
+      })
+    })
+
+    it('throws when the share entry does not exist', async () => {
+      repository.exist.mockResolvedValue(true)
+      roadmapSharesRepository.delete.mockResolvedValue({ affected: 0 })
+
+      await expect(
+        service.revokeShare('owner-1', 'roadmap-123', 'user-a')
+      ).rejects.toBeInstanceOf(NotFoundException)
+    })
+
+    it('throws when the roadmap cannot be found for the owner', async () => {
+      repository.exist.mockResolvedValue(false)
+
+      await expect(
+        service.revokeShare('owner-1', 'roadmap-123', 'user-a')
+      ).rejects.toBeInstanceOf(NotFoundException)
+
+      expect(roadmapSharesRepository.delete).not.toHaveBeenCalled()
     })
   })
 

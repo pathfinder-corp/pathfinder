@@ -9,6 +9,7 @@ import {
 } from 'typeorm'
 
 import { Roadmap } from '../../roadmaps/entities/roadmap.entity'
+import { RoadmapShare } from '../../roadmaps/entities/roadmap-share.entity'
 
 export enum UserRole {
   STUDENT = 'student',
@@ -80,4 +81,7 @@ export class User {
 
   @OneToMany(() => Roadmap, (roadmap) => roadmap.user)
   roadmaps?: Roadmap[]
+
+  @OneToMany(() => RoadmapShare, (share) => share.sharedWith)
+  sharedRoadmaps?: RoadmapShare[]
 }
