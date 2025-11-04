@@ -72,6 +72,7 @@ describe('RoadmapsService', () => {
     findOne: jest.Mock
     create: jest.Mock
     save: jest.Mock
+    delete: jest.Mock
   }
   let contentPolicy: {
     validateRoadmapRequest: jest.Mock
@@ -99,7 +100,8 @@ describe('RoadmapsService', () => {
     repository = {
       findOne: jest.fn(),
       create: jest.fn(),
-      save: jest.fn()
+      save: jest.fn(),
+      delete: jest.fn()
     }
 
     contentPolicy = {
@@ -310,6 +312,41 @@ describe('RoadmapsService', () => {
 
       expect(generateContentMock).not.toHaveBeenCalled()
       expect(repository.save).not.toHaveBeenCalled()
+    })
+  })
+
+  describe('deleteRoadmap', () => {
+    it('removes the roadmap when it belongs to the user', async () => {
+      repository.delete.mockResolvedValue({ affected: 1 })
+
+      await expect(
+        service.deleteRoadmap('user-456', 'roadmap-123')
+      ).resolves.toBeUndefined()
+
+      expect(repository.delete).toHaveBeenCalledWith({
+        id: 'roadmap-123',
+        userId: 'user-456'
+      })
+    })
+
+    it('throws NotFoundException when the roadmap is missing', async () => {
+      repository.delete.mockResolvedValue({ affected: 0 })
+
+      await expect(
+        service.deleteRoadmap('user-456', 'missing-roadmap')
+      ).rejects.toBeInstanceOf(NotFoundException)
+    })
+  })
+
+  describe('deleteAllRoadmaps', () => {
+    it('removes all roadmaps for the user without error', async () => {
+      repository.delete.mockResolvedValue({ affected: 3 })
+
+      await expect(
+        service.deleteAllRoadmaps('user-456')
+      ).resolves.toBeUndefined()
+
+      expect(repository.delete).toHaveBeenCalledWith({ userId: 'user-456' })
     })
   })
 })

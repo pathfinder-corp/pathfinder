@@ -200,6 +200,18 @@ export class RoadmapsService {
     return this.toRoadmapResponse(roadmap)
   }
 
+  async deleteRoadmap(userId: string, roadmapId: string): Promise<void> {
+    const result = await this.roadmapsRepository.delete({ id: roadmapId, userId })
+
+    if (!result.affected) {
+      throw new NotFoundException('Roadmap not found')
+    }
+  }
+
+  async deleteAllRoadmaps(userId: string): Promise<void> {
+    await this.roadmapsRepository.delete({ userId })
+  }
+
   async generateRoadmapInsight(
     userId: string,
     roadmapId: string,

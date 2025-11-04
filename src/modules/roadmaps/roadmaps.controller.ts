@@ -2,6 +2,7 @@ import {
   Body,
   ClassSerializerInterceptor,
   Controller,
+  Delete,
   Get,
   HttpCode,
   HttpStatus,
@@ -80,6 +81,26 @@ export class RoadmapsController {
     @Param('id') roadmapId: string
   ): Promise<RoadmapResponseDto> {
     return await this.roadmapsService.getRoadmapById(user.id, roadmapId)
+  }
+
+  @Delete()
+  @HttpCode(HttpStatus.NO_CONTENT)
+  @ApiOperation({ summary: 'Delete all generated roadmaps for the user' })
+  @ApiResponse({ status: 204, description: 'Roadmaps deleted successfully' })
+  async deleteAllRoadmaps(@CurrentUser() user: User): Promise<void> {
+    await this.roadmapsService.deleteAllRoadmaps(user.id)
+  }
+
+  @Delete(':id')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  @ApiOperation({ summary: 'Delete a generated roadmap' })
+  @ApiResponse({ status: 204, description: 'Roadmap deleted successfully' })
+  @ApiResponse({ status: 404, description: 'Roadmap not found' })
+  async deleteRoadmap(
+    @CurrentUser() user: User,
+    @Param('id') roadmapId: string
+  ): Promise<void> {
+    await this.roadmapsService.deleteRoadmap(user.id, roadmapId)
   }
 
   @Post(':id/insight')
