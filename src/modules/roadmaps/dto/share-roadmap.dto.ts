@@ -9,7 +9,9 @@ import {
 } from 'class-validator'
 
 export class ShareRoadmapDto {
-  @ApiPropertyOptional({ description: 'Share the roadmap with all registered users' })
+  @ApiPropertyOptional({
+    description: 'Share the roadmap with all registered users'
+  })
   @IsOptional()
   @IsBoolean()
   shareWithAll?: boolean
@@ -29,7 +31,9 @@ export class ShareRoadmapDto {
 }
 
 export class RoadmapShareStateDto {
-  @ApiProperty({ description: 'Indicates whether the roadmap is shared with all users' })
+  @ApiProperty({
+    description: 'Indicates whether the roadmap is shared with all users'
+  })
   isSharedWithAll!: boolean
 
   @ApiProperty({
@@ -38,4 +42,3 @@ export class RoadmapShareStateDto {
   })
   sharedWithUserIds!: string[]
 }
-

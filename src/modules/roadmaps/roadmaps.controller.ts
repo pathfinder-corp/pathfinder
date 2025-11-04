@@ -27,10 +27,7 @@ import {
   RoadmapInsightResponseDto
 } from './dto/roadmap-insight.dto'
 import { RoadmapResponseDto } from './dto/roadmap-response.dto'
-import {
-  RoadmapShareStateDto,
-  ShareRoadmapDto
-} from './dto/share-roadmap.dto'
+import { RoadmapShareStateDto, ShareRoadmapDto } from './dto/share-roadmap.dto'
 import { RoadmapsService } from './roadmaps.service'
 
 @ApiTags('Roadmaps')
@@ -170,16 +167,15 @@ export class RoadmapsController {
   @Delete(':id/share/:userId')
   @HttpCode(HttpStatus.NO_CONTENT)
   @ApiOperation({ summary: 'Revoke roadmap access from a shared user' })
-  @ApiResponse({ status: 204, description: 'Roadmap access revoked successfully' })
+  @ApiResponse({
+    status: 204,
+    description: 'Roadmap access revoked successfully'
+  })
   async revokeRoadmapShare(
     @CurrentUser() user: User,
     @Param('id') roadmapId: string,
     @Param('userId') sharedWithUserId: string
   ): Promise<void> {
-    await this.roadmapsService.revokeShare(
-      user.id,
-      roadmapId,
-      sharedWithUserId
-    )
+    await this.roadmapsService.revokeShare(user.id, roadmapId, sharedWithUserId)
   }
 }

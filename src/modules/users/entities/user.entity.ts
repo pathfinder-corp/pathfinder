@@ -8,8 +8,8 @@ import {
   UpdateDateColumn
 } from 'typeorm'
 
-import { Roadmap } from '../../roadmaps/entities/roadmap.entity'
 import { RoadmapShare } from '../../roadmaps/entities/roadmap-share.entity'
+import { Roadmap } from '../../roadmaps/entities/roadmap.entity'
 
 export enum UserRole {
   STUDENT = 'student',

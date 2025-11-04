@@ -6,25 +6,22 @@ import {
 import { ConfigService } from '@nestjs/config'
 import { Repository } from 'typeorm'
 
+import { User } from '../users/entities/user.entity'
 import {
   ExperienceLevel,
   GenerateRoadmapDto,
   LearningPace
 } from './dto/generate-roadmap.dto'
 import { RoadmapInsightRequestDto } from './dto/roadmap-insight.dto'
-import {
-  RoadmapShareStateDto,
-  ShareRoadmapDto
-} from './dto/share-roadmap.dto'
+import { RoadmapShareStateDto, ShareRoadmapDto } from './dto/share-roadmap.dto'
+import { RoadmapShare } from './entities/roadmap-share.entity'
 import {
   Roadmap,
   RoadmapMilestone,
   RoadmapPhase,
   RoadmapSummary
 } from './entities/roadmap.entity'
-import { RoadmapShare } from './entities/roadmap-share.entity'
 import { RoadmapsService } from './roadmaps.service'
-import { User } from '../users/entities/user.entity'
 
 const generateContentMock = jest.fn()
 
@@ -131,7 +128,9 @@ describe('RoadmapsService', () => {
       exist: jest.fn()
     }
     roadmapSharesRepository.find.mockResolvedValue([])
-    roadmapSharesRepository.save.mockImplementation(async (entities) => entities)
+    roadmapSharesRepository.save.mockImplementation(
+      async (entities) => entities
+    )
 
     usersRepository = {
       find: jest.fn()
@@ -570,9 +569,13 @@ describe('RoadmapsService', () => {
         repository.findOne.mockResolvedValue(roadmap)
         roadmapSharesRepository.find.mockResolvedValueOnce([])
 
-        const result = await service.updateShareSettings('owner-1', roadmap.id, {
-          shareWithAll: false
-        })
+        const result = await service.updateShareSettings(
+          'owner-1',
+          roadmap.id,
+          {
+            shareWithAll: false
+          }
+        )
 
         expect(repository.save).toHaveBeenCalledWith(
           expect.objectContaining({ isSharedWithAll: false })

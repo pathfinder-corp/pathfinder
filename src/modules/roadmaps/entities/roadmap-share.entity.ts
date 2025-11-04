@@ -38,4 +38,3 @@ export class RoadmapShare {
   @CreateDateColumn({ name: 'created_at' })
   createdAt!: Date
 }
-
