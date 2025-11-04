@@ -109,27 +109,28 @@ export class RoadmapContentPolicyService {
       )
     }
 
-    const educationalSignals = [
-      /\b(learn|learning|study|studying|education|educational|teach|teaching|training|skill|skills|upskill|practice|curriculum|course|courses|roadmap|mentorship|mentor|coach|career|certification|knowledge|understand|explore|exam|assessment|portfolio|project|improve|master|develop|build|become|prepare)\b/
-    ]
+    // TODO: Uncomment this when we have a better way to detect educational intent
+    // const educationalSignals = [
+    //   /\b(learn|learning|study|studying|education|educational|teach|teaching|training|skill|skills|upskill|practice|curriculum|course|courses|roadmap|mentorship|mentor|coach|career|certification|knowledge|understand|explore|exam|assessment|portfolio|project|improve|master|develop|build|become|prepare)\b/
+    // ]
 
-    const hasEducationalIntent = educationalSignals.some((pattern) =>
-      pattern.test(normalized)
-    )
+    // const hasEducationalIntent = educationalSignals.some((pattern) =>
+    //   pattern.test(normalized)
+    // )
 
-    if (hasEducationalIntent) {
-      return
-    }
+    // if (hasEducationalIntent) {
+    //   return
+    // }
 
-    const wordCount = normalized.split(/\s+/).filter(Boolean).length
+    // const wordCount = normalized.split(/\s+/).filter(Boolean).length
 
-    if (wordCount <= 4) {
-      return
-    }
+    // if (wordCount <= 4) {
+    //   return
+    // }
 
-    throw new BadRequestException(
-      `Please clarify the educational goal, such as the skill, course, or outcome you want to focus on in your ${contextLabel}.`
-    )
+    // throw new BadRequestException(
+    //   `Please clarify the educational goal, such as the skill, course, or outcome you want to focus on in your ${contextLabel}.`
+    // )
   }
 
   private assertNoSensitiveTopics(content: string, contextLabel: string): void {
