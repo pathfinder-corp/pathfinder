@@ -10,6 +10,7 @@ import {
   ParseUUIDPipe,
   Patch,
   Post,
+  Query,
   UseGuards,
   UseInterceptors
 } from '@nestjs/common'
@@ -25,6 +26,7 @@ import { Roles } from '../auth/decorators/roles.decorator'
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard'
 import { RolesGuard } from '../auth/guards/roles.guard'
 import { CreateUserDto } from './dto/create-user.dto'
+import { SearchUserDto, UserSearchResultDto } from './dto/search-user.dto'
 import { UpdateUserDto } from './dto/update-user.dto'
 import { UserResponseDto } from './dto/user-response.dto'
 import { User, UserRole } from './entities/user.entity'
@@ -37,6 +39,23 @@ import { UsersService } from './users.service'
 @ApiBearerAuth()
 export class UsersController {
   constructor(private readonly usersService: UsersService) {}
+
+  @Get('search')
+  @ApiOperation({ summary: 'Search for users by email' })
+  @ApiResponse({
+    status: 200,
+    description: 'List of users matching the email search',
+    type: [UserSearchResultDto]
+  })
+  @ApiResponse({ status: 400, description: 'Invalid email format' })
+  async searchUsers(@Query() searchDto: SearchUserDto) {
+    const users = await this.usersService.searchByEmail(searchDto.email)
+    return users.map((user) =>
+      plainToInstance(UserSearchResultDto, user, {
+        excludeExtraneousValues: true
+      })
+    )
+  }
 
   @Post()
   @Roles(UserRole.ADMIN)

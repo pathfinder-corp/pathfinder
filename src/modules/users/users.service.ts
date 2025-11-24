@@ -69,4 +69,14 @@ export class UsersService {
     const user = await this.findOne(id)
     await this.userRepository.remove(user)
   }
+
+  async searchByEmail(email: string): Promise<User[]> {
+    const users = await this.userRepository.find({
+      where: { email },
+      select: ['id', 'email', 'firstName', 'lastName'],
+      take: 50
+    })
+
+    return users
+  }
 }

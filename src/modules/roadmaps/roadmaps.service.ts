@@ -140,8 +140,6 @@ export class RoadmapsService {
         exposeUnsetFields: false
       }) as RoadmapContentPlain
 
-      console.log(roadmapPlain)
-
       if (
         !roadmapPlain.summary ||
         !Array.isArray(roadmapPlain.phases) ||
