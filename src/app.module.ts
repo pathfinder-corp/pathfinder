@@ -9,6 +9,7 @@ import { AppService } from './app.service'
 import appConfig from './config/app.config'
 import { getDatabaseConfig } from './config/database.config'
 import { envValidationSchema } from './config/env.validation'
+import { AssessmentsModule } from './modules/assessments/assessments.module'
 import { AuthModule } from './modules/auth/auth.module'
 import { MailModule } from './modules/mail/mail.module'
 import { RoadmapsModule } from './modules/roadmaps/roadmaps.module'
@@ -43,7 +44,8 @@ import { UsersModule } from './modules/users/users.module'
     UsersModule,
     AuthModule,
     MailModule,
-    RoadmapsModule
+    RoadmapsModule,
+    AssessmentsModule
   ],
   controllers: [AppController],
   providers: [

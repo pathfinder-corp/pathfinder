@@ -8,6 +8,8 @@ import {
   UpdateDateColumn
 } from 'typeorm'
 
+import { AssessmentShare } from '../../assessments/entities/assessment-share.entity'
+import { Assessment } from '../../assessments/entities/assessment.entity'
 import { RoadmapShare } from '../../roadmaps/entities/roadmap-share.entity'
 import { Roadmap } from '../../roadmaps/entities/roadmap.entity'
 
@@ -84,4 +86,10 @@ export class User {
 
   @OneToMany(() => RoadmapShare, (share) => share.sharedWith)
   sharedRoadmaps?: RoadmapShare[]
+
+  @OneToMany(() => Assessment, (assessment) => assessment.user)
+  assessments?: Assessment[]
+
+  @OneToMany(() => AssessmentShare, (share) => share.sharedWith)
+  sharedAssessments?: AssessmentShare[]
 }
