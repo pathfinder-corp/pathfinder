@@ -15,7 +15,7 @@ import { Roadmap } from '../../roadmaps/entities/roadmap.entity'
 
 export enum UserRole {
   STUDENT = 'student',
-  COUNSELOR = 'counselor',
+  MENTOR = 'mentor',
   ADMIN = 'admin'
 }
 
