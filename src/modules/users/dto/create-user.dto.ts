@@ -36,18 +36,4 @@ export class CreateUserDto {
   @IsEnum(UserRole)
   @IsOptional()
   role?: UserRole
-
-  @ApiProperty({ required: false })
-  @IsString()
-  @IsOptional()
-  phone?: string
-
-  @ApiProperty({ required: false })
-  @IsOptional()
-  dateOfBirth?: Date
-
-  @ApiProperty({ required: false })
-  @IsString()
-  @IsOptional()
-  location?: string
 }

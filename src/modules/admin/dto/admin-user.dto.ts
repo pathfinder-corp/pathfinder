@@ -63,14 +63,6 @@ export class AdminUserResponseDto {
   @Expose()
   avatar?: string
 
-  @ApiPropertyOptional()
-  @Expose()
-  phone?: string
-
-  @ApiPropertyOptional()
-  @Expose()
-  location?: string
-
   @ApiProperty()
   @Expose()
   @Type(() => Date)

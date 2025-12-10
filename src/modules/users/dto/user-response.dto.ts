@@ -34,18 +34,6 @@ export class UserResponseDto {
   avatar?: string
 
   @Expose()
-  @ApiProperty({ required: false })
-  phone?: string
-
-  @Expose()
-  @ApiProperty({ required: false })
-  dateOfBirth?: Date
-
-  @Expose()
-  @ApiProperty({ required: false })
-  location?: string
-
-  @Expose()
   @ApiProperty()
   createdAt: Date
 

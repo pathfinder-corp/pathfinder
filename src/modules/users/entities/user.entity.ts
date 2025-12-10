@@ -60,15 +60,6 @@ export class User {
   @Column({ nullable: true })
   avatar?: string
 
-  @Column({ nullable: true })
-  phone?: string
-
-  @Column({ type: 'date', nullable: true })
-  dateOfBirth?: Date
-
-  @Column({ nullable: true })
-  location?: string
-
   @CreateDateColumn()
   createdAt: Date
 

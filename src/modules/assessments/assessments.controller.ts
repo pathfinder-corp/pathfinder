@@ -31,7 +31,7 @@ import {
 } from './dto/share-assessment.dto'
 import { SubmitAnswerDto } from './dto/submit-answer.dto'
 
-@ApiTags('assessments')
+@ApiTags('Assessments')
 @ApiBearerAuth()
 @UseGuards(JwtAuthGuard)
 @Controller('assessments')
