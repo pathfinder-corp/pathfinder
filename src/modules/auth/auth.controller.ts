@@ -5,6 +5,7 @@ import {
   Get,
   HttpCode,
   HttpStatus,
+  Patch,
   Post,
   Query,
   UseGuards,
@@ -16,9 +17,11 @@ import {
   ApiResponse,
   ApiTags
 } from '@nestjs/swagger'
+import { plainToInstance } from 'class-transformer'
 
 import { ForgotPasswordDto } from '../users/dto/forgot-password.dto'
 import { ResetPasswordDto } from '../users/dto/reset-password.dto'
+import { UserResponseDto } from '../users/dto/user-response.dto'
 import { User } from '../users/entities/user.entity'
 import { AuthService } from './auth.service'
 import { CurrentUser } from './decorators/current-user.decorator'
@@ -26,6 +29,8 @@ import { AuthResponseDto } from './dto/auth-response.dto'
 import { LoginDto } from './dto/login.dto'
 import { RegisterDto } from './dto/register.dto'
 import { VerifyEmailDto } from './dto/verify-email.dto'
+import { ChangePasswordDto } from './dto/change-password.dto'
+import { UpdateProfileDto } from './dto/update-profile.dto'
 import { JwtAuthGuard } from './guards/jwt-auth.guard'
 
 @ApiTags('Authentication')
@@ -168,5 +173,51 @@ export class AuthController {
   ): Promise<{ message: string }> {
     await this.authService.resendVerificationEmail(user.id)
     return { message: 'Verification email sent' }
+  }
+
+  @Patch('profile')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Update current user profile (first name, last name)' })
+  @ApiResponse({
+    status: 200,
+    description: 'Profile updated successfully',
+    type: UserResponseDto
+  })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  async updateProfile(
+    @CurrentUser() user: User,
+    @Body() updateProfileDto: UpdateProfileDto
+  ): Promise<UserResponseDto> {
+    const updatedUser = await this.authService.updateProfile(
+      user.id,
+      updateProfileDto
+    )
+    return plainToInstance(UserResponseDto, updatedUser, {
+      excludeExtraneousValues: true
+    })
+  }
+
+  @Post('change-password')
+  @HttpCode(HttpStatus.OK)
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Change current user password' })
+  @ApiResponse({
+    status: 200,
+    description: 'Password changed successfully',
+    schema: {
+      properties: {
+        message: { type: 'string', example: 'Password changed successfully' }
+      }
+    }
+  })
+  @ApiResponse({ status: 400, description: 'Current password is incorrect' })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  async changePassword(
+    @CurrentUser() user: User,
+    @Body() changePasswordDto: ChangePasswordDto
+  ): Promise<{ message: string }> {
+    return await this.authService.changePassword(user.id, changePasswordDto)
   }
 }

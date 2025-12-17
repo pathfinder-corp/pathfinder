@@ -16,6 +16,8 @@ import { MailService } from '../mail/mail.service'
 import { ForgotPasswordDto } from '../users/dto/forgot-password.dto'
 import { ResetPasswordDto } from '../users/dto/reset-password.dto'
 import { UserResponseDto } from '../users/dto/user-response.dto'
+import { ChangePasswordDto } from './dto/change-password.dto'
+import { UpdateProfileDto } from './dto/update-profile.dto'
 import { PasswordResetToken } from '../users/entities/password-reset-token.entity'
 import { User, UserStatus } from '../users/entities/user.entity'
 import { UsersService } from '../users/users.service'
@@ -355,6 +357,45 @@ export class AuthService {
 
     // Send new verification email
     await this.sendVerificationEmail(userId)
+  }
+
+  async updateProfile(
+    userId: string,
+    updateProfileDto: UpdateProfileDto
+  ): Promise<User> {
+    const user = await this.usersService.findOne(userId)
+
+    if (updateProfileDto.firstName !== undefined) {
+      user.firstName = updateProfileDto.firstName
+    }
+
+    if (updateProfileDto.lastName !== undefined) {
+      user.lastName = updateProfileDto.lastName
+    }
+
+    return await this.userRepository.save(user)
+  }
+
+  async changePassword(
+    userId: string,
+    changePasswordDto: ChangePasswordDto
+  ): Promise<{ message: string }> {
+    const user = await this.usersService.findOne(userId)
+
+    const isCurrentPasswordValid = await bcrypt.compare(
+      changePasswordDto.currentPassword,
+      user.password
+    )
+
+    if (!isCurrentPasswordValid) {
+      throw new BadRequestException('Current password is incorrect')
+    }
+
+    await this.usersService.update(userId, {
+      password: changePasswordDto.newPassword
+    })
+
+    return { message: 'Password changed successfully' }
   }
 
   private buildAuthResponse(user: User, accessToken: string): AuthResponseDto {
