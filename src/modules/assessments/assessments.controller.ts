@@ -144,8 +144,14 @@ export class AssessmentsController {
     schema: {
       type: 'object',
       properties: {
-        isCorrect: { type: 'boolean', description: 'Whether the submitted answer was correct' },
-        correctAnswerIndex: { type: 'number', description: 'The index (0-3) of the correct answer option' }
+        isCorrect: {
+          type: 'boolean',
+          description: 'Whether the submitted answer was correct'
+        },
+        correctAnswerIndex: {
+          type: 'number',
+          description: 'The index (0-3) of the correct answer option'
+        }
       }
     }
   })

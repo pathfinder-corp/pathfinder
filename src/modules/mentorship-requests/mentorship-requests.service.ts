@@ -12,6 +12,7 @@ import { LessThan, Repository } from 'typeorm'
 
 import { AuditLogService } from '../../common/services/audit-log.service'
 import { MentorProfilesService } from '../mentor-profiles/mentor-profiles.service'
+import { MentorshipsService } from '../mentorships/mentorships.service'
 import { NotificationType } from '../notifications/entities/notification.entity'
 import { NotificationsService } from '../notifications/notifications.service'
 import { UserRole } from '../users/entities/user.entity'
@@ -31,6 +32,7 @@ export class MentorshipRequestsService {
     @InjectRepository(MentorshipRequest)
     private readonly requestRepository: Repository<MentorshipRequest>,
     private readonly mentorProfilesService: MentorProfilesService,
+    private readonly mentorshipsService: MentorshipsService,
     private readonly notificationsService: NotificationsService,
     private readonly auditLogService: AuditLogService,
     private readonly configService: ConfigService
@@ -65,6 +67,18 @@ export class MentorshipRequestsService {
     if (existingPending) {
       throw new ConflictException(
         'You already have a pending request with this mentor'
+      )
+    }
+
+    // Check if active mentorship already exists
+    const activeMentorship = await this.mentorshipsService.findActiveBetween(
+      dto.mentorId,
+      studentId
+    )
+
+    if (activeMentorship) {
+      throw new ConflictException(
+        'You already have an active mentorship with this mentor'
       )
     }
 
@@ -128,7 +142,7 @@ export class MentorshipRequestsService {
     userRole: UserRole,
     query: ListRequestsQueryDto
   ): Promise<{ requests: MentorshipRequest[]; total: number }> {
-    const { status, role, limit = 20, offset = 0 } = query
+    const { status, role } = query
 
     const qb = this.requestRepository
       .createQueryBuilder('request')
@@ -154,8 +168,8 @@ export class MentorshipRequestsService {
 
     const [requests, total] = await qb
       .orderBy('request.createdAt', 'DESC')
-      .skip(offset)
-      .take(limit)
+      .skip(query.skip)
+      .take(query.take)
       .getManyAndCount()
 
     return { requests, total }
@@ -194,6 +208,10 @@ export class MentorshipRequestsService {
       RequestStatus.ACCEPTED
     )
 
+    // Create mentorship relationship
+    const mentorship =
+      await this.mentorshipsService.findOrCreateFromRequest(request)
+
     // Notify student
     await this.notificationsService.create({
       userId: request.studentId,
@@ -201,7 +219,7 @@ export class MentorshipRequestsService {
       title: 'Request Accepted!',
       message:
         'Your mentorship request has been accepted. You can now message your mentor!',
-      payload: { requestId }
+      payload: { requestId, mentorshipId: mentorship.id }
     })
 
     this.logger.log(`Request ${requestId} accepted by mentor ${mentorId}`)

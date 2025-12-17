@@ -45,9 +45,22 @@ export class NotificationListResponseDto {
   @Type(() => NotificationResponseDto)
   notifications: NotificationResponseDto[]
 
-  @ApiProperty()
+  @ApiProperty({
+    description: 'Pagination metadata',
+    example: {
+      total: 100,
+      page: 1,
+      limit: 50,
+      totalPages: 2
+    }
+  })
   @Expose()
-  total: number
+  meta: {
+    total: number
+    page: number
+    limit: number
+    totalPages: number
+  }
 
   @ApiProperty()
   @Expose()

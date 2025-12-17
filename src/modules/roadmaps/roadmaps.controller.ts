@@ -114,7 +114,11 @@ export class RoadmapsController {
     @CurrentUser() user: User,
     @Param('id') roadmapId: string
   ): Promise<RoadmapResponseDto> {
-    return await this.roadmapsService.getRoadmapById(user.id, roadmapId)
+    return await this.roadmapsService.getRoadmapById(
+      user.id,
+      roadmapId,
+      user.role
+    )
   }
 
   @Delete()

@@ -6,7 +6,8 @@ import { ExperienceLevel, LearningPace } from './generate-roadmap.dto'
 export enum RoadmapAccessType {
   OWNER = 'owner',
   SHARED = 'shared',
-  PUBLIC = 'public'
+  PUBLIC = 'public',
+  ADMIN = 'admin'
 }
 
 export class RoadmapResourceDto {

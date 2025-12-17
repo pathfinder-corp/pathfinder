@@ -18,10 +18,11 @@ import {
   ApiTags
 } from '@nestjs/swagger'
 
+import { CurrentUser } from '../../auth/decorators/current-user.decorator'
 import { Roles } from '../../auth/decorators/roles.decorator'
 import { JwtAuthGuard } from '../../auth/guards/jwt-auth.guard'
 import { RolesGuard } from '../../auth/guards/roles.guard'
-import { UserRole } from '../../users/entities/user.entity'
+import { User, UserRole } from '../../users/entities/user.entity'
 import {
   AdminUpdateUserDto,
   AdminUserDetailResponseDto,
@@ -73,11 +74,13 @@ export class AdminUsersController {
     type: AdminUserResponseDto
   })
   @ApiResponse({ status: 404, description: 'User not found' })
+  @ApiResponse({ status: 403, description: 'Cannot modify admin users' })
   async update(
     @Param('id', new ParseUUIDPipe()) id: string,
-    @Body() updateDto: AdminUpdateUserDto
+    @Body() updateDto: AdminUpdateUserDto,
+    @CurrentUser() currentUser: User
   ): Promise<AdminUserResponseDto> {
-    return this.adminUsersService.update(id, updateDto)
+    return this.adminUsersService.update(id, updateDto, currentUser)
   }
 
   @Delete(':id')
@@ -85,6 +88,7 @@ export class AdminUsersController {
   @ApiOperation({ summary: 'Delete a user' })
   @ApiResponse({ status: 204, description: 'User deleted successfully' })
   @ApiResponse({ status: 404, description: 'User not found' })
+  @ApiResponse({ status: 403, description: 'Cannot delete admin users' })
   async remove(@Param('id', new ParseUUIDPipe()) id: string): Promise<void> {
     await this.adminUsersService.remove(id)
   }

@@ -104,7 +104,7 @@ export class MentorshipsService {
     userRole: UserRole,
     query: ListMentorshipsQueryDto
   ): Promise<{ mentorships: Mentorship[]; total: number }> {
-    const { status, role, limit = 20, offset = 0 } = query
+    const { status, role } = query
 
     const qb = this.mentorshipRepository
       .createQueryBuilder('mentorship')
@@ -127,9 +127,9 @@ export class MentorshipsService {
     }
 
     const [mentorships, total] = await qb
-      .orderBy('mentorship.started_at', 'DESC')
-      .skip(offset)
-      .take(limit)
+      .orderBy('mentorship.startedAt', 'DESC')
+      .skip(query.skip)
+      .take(query.take)
       .getManyAndCount()
 
     return { mentorships, total }

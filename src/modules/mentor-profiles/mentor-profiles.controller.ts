@@ -76,13 +76,21 @@ export class MentorProfilesController {
   ): Promise<MentorListResponseDto> {
     const { mentors, total } = await this.profilesService.search(query)
 
+    const page = query.page ?? 1
+    const limit = query.limit ?? 20
+
     return {
       mentors: mentors.map((m) =>
         plainToInstance(MentorProfileResponseDto, m, {
           excludeExtraneousValues: true
         })
       ),
-      total
+      meta: {
+        total,
+        page,
+        limit,
+        totalPages: Math.ceil(total / limit)
+      }
     }
   }
 

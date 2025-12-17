@@ -10,6 +10,11 @@ import {
   Min
 } from 'class-validator'
 
+export enum SortOrder {
+  ASC = 'ASC',
+  DESC = 'DESC'
+}
+
 export class SearchMentorsQueryDto {
   @ApiPropertyOptional({ description: 'Search in name, headline, bio' })
   @IsOptional()
@@ -54,6 +59,13 @@ export class SearchMentorsQueryDto {
   @Min(0)
   minYearsExperience?: number
 
+  @ApiPropertyOptional({ default: 1, minimum: 1 })
+  @IsOptional()
+  @Transform(({ value }) => parseInt(value, 10))
+  @IsInt()
+  @Min(1)
+  page?: number = 1
+
   @ApiPropertyOptional({ default: 20, minimum: 1, maximum: 100 })
   @IsOptional()
   @Transform(({ value }) => parseInt(value, 10))
@@ -62,10 +74,21 @@ export class SearchMentorsQueryDto {
   @Max(100)
   limit?: number = 20
 
-  @ApiPropertyOptional({ default: 0, minimum: 0 })
+  @ApiPropertyOptional()
   @IsOptional()
-  @Transform(({ value }) => parseInt(value, 10))
-  @IsInt()
-  @Min(0)
-  offset?: number = 0
+  @IsString()
+  sortBy?: string
+
+  @ApiPropertyOptional({ enum: SortOrder, default: SortOrder.DESC })
+  @IsOptional()
+  @IsEnum(SortOrder)
+  sortOrder?: SortOrder = SortOrder.DESC
+
+  get skip(): number {
+    return ((this.page ?? 1) - 1) * (this.limit ?? 20)
+  }
+
+  get take(): number {
+    return this.limit ?? 20
+  }
 }

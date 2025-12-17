@@ -6,7 +6,7 @@ import {
 import { ConfigService } from '@nestjs/config'
 import { Repository } from 'typeorm'
 
-import { User } from '../users/entities/user.entity'
+import { User, UserRole } from '../users/entities/user.entity'
 import {
   ExperienceLevel,
   GenerateRoadmapDto,
@@ -362,7 +362,11 @@ describe('RoadmapsService', () => {
       const ownerRoadmap = { ...baseRoadmap, userId: 'owner-1' }
       repository.findOne.mockResolvedValue(ownerRoadmap)
 
-      const result = await service.getRoadmapById('owner-1', ownerRoadmap.id)
+      const result = await service.getRoadmapById(
+        'owner-1',
+        ownerRoadmap.id,
+        UserRole.STUDENT
+      )
 
       expect(result.id).toBe(ownerRoadmap.id)
       expect(result.accessType).toBe(RoadmapAccessType.OWNER)
@@ -378,7 +382,11 @@ describe('RoadmapsService', () => {
       repository.findOne.mockResolvedValue(sharedRoadmap)
       roadmapSharesRepository.exist.mockResolvedValue(true)
 
-      const result = await service.getRoadmapById('viewer-1', sharedRoadmap.id)
+      const result = await service.getRoadmapById(
+        'viewer-1',
+        sharedRoadmap.id,
+        UserRole.STUDENT
+      )
 
       expect(result.id).toBe(sharedRoadmap.id)
       expect(result.accessType).toBe(RoadmapAccessType.SHARED)
@@ -398,7 +406,11 @@ describe('RoadmapsService', () => {
       }
       repository.findOne.mockResolvedValue(sharedWithAll)
 
-      const result = await service.getRoadmapById('viewer-2', sharedWithAll.id)
+      const result = await service.getRoadmapById(
+        'viewer-2',
+        sharedWithAll.id,
+        UserRole.STUDENT
+      )
 
       expect(result.id).toBe(sharedWithAll.id)
       expect(result.accessType).toBe(RoadmapAccessType.PUBLIC)
@@ -415,8 +427,27 @@ describe('RoadmapsService', () => {
       roadmapSharesRepository.exist.mockResolvedValue(false)
 
       await expect(
-        service.getRoadmapById('viewer-3', privateRoadmap.id)
+        service.getRoadmapById('viewer-3', privateRoadmap.id, UserRole.STUDENT)
       ).rejects.toBeInstanceOf(NotFoundException)
+    })
+
+    it('allows admin to access any roadmap with accessType ADMIN', async () => {
+      const privateRoadmap = {
+        ...baseRoadmap,
+        userId: 'owner-1',
+        isSharedWithAll: false
+      }
+      repository.findOne.mockResolvedValue(privateRoadmap)
+
+      const result = await service.getRoadmapById(
+        'admin-user',
+        privateRoadmap.id,
+        UserRole.ADMIN
+      )
+
+      expect(result.id).toBe(privateRoadmap.id)
+      expect(result.accessType).toBe(RoadmapAccessType.ADMIN)
+      expect(roadmapSharesRepository.exist).not.toHaveBeenCalled()
     })
   })
 

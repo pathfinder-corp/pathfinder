@@ -40,20 +40,20 @@ export class NotificationsController {
 
   @Get()
   @ApiOperation({ summary: 'Get user notifications' })
+  @ApiQuery({ name: 'page', required: false, type: Number })
   @ApiQuery({ name: 'limit', required: false, type: Number })
-  @ApiQuery({ name: 'offset', required: false, type: Number })
   @ApiQuery({ name: 'unreadOnly', required: false, type: Boolean })
   @ApiResponse({ status: 200, type: NotificationListResponseDto })
   async getNotifications(
     @CurrentUser() user: User,
+    @Query('page', new DefaultValuePipe(1), ParseIntPipe) page: number,
     @Query('limit', new DefaultValuePipe(50), ParseIntPipe) limit: number,
-    @Query('offset', new DefaultValuePipe(0), ParseIntPipe) offset: number,
     @Query('unreadOnly', new DefaultValuePipe(false), ParseBoolPipe)
     unreadOnly: boolean
   ): Promise<NotificationListResponseDto> {
     const result = await this.notificationsService.findByUser(user.id, {
+      page,
       limit,
-      offset,
       unreadOnly
     })
 
@@ -63,7 +63,12 @@ export class NotificationsController {
           excludeExtraneousValues: true
         })
       ),
-      total: result.total,
+      meta: {
+        total: result.total,
+        page,
+        limit,
+        totalPages: Math.ceil(result.total / limit)
+      },
       unreadCount: result.unreadCount
     }
   }

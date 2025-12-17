@@ -52,6 +52,8 @@ export class RecommendationsService {
 
     // Get all available mentors
     const { mentors, total } = await this.mentorProfilesService.search({
+      skip: 0,
+      take: 100, // Get more to filter/sort
       limit: 100 // Get more to filter/sort
     })
 

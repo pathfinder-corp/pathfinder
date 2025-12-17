@@ -70,13 +70,21 @@ export class MentorshipRequestsController {
       query
     )
 
+    const page = query.page ?? 1
+    const limit = query.limit ?? 20
+
     return {
       requests: requests.map((r) =>
         plainToInstance(MentorshipRequestResponseDto, r, {
           excludeExtraneousValues: true
         })
       ),
-      total
+      meta: {
+        total,
+        page,
+        limit,
+        totalPages: Math.ceil(total / limit)
+      }
     }
   }
 

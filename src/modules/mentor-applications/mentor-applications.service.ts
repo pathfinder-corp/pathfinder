@@ -286,22 +286,29 @@ export class MentorApplicationsService {
   async findAll(
     query: ListApplicationsQueryDto
   ): Promise<{ applications: MentorApplication[]; total: number }> {
-    const { status, limit = 20, offset = 0 } = query
+    const { status, sortBy, sortOrder } = query
 
     const whereClause: Record<string, any> = {}
     if (status) {
       whereClause.status = status
     }
 
-    const [applications, total] = await this.applicationRepository.findAndCount(
-      {
-        where: whereClause,
-        relations: ['user'],
-        order: { createdAt: 'DESC' },
-        take: limit,
-        skip: offset
-      }
-    )
+    const qb = this.applicationRepository
+      .createQueryBuilder('application')
+      .leftJoinAndSelect('application.user', 'user')
+      .where(whereClause)
+
+    // Apply sorting
+    if (sortBy) {
+      qb.orderBy(`application.${sortBy}`, sortOrder ?? 'DESC')
+    } else {
+      qb.orderBy('application.createdAt', 'DESC')
+    }
+
+    const [applications, total] = await qb
+      .skip(query.skip)
+      .take(query.take)
+      .getManyAndCount()
 
     return { applications, total }
   }

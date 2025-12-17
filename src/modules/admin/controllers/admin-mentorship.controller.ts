@@ -67,9 +67,15 @@ export class AdminMentorshipController {
   @ApiResponse({ status: 200 })
   async listApplications(
     @Query() query: AdminListApplicationsQueryDto
-  ): Promise<{ applications: AdminApplicationResponseDto[]; total: number }> {
+  ): Promise<{
+    applications: AdminApplicationResponseDto[]
+    meta: { total: number; page: number; limit: number; totalPages: number }
+  }> {
     const { applications, total } =
       await this.applicationsService.findAll(query)
+
+    const page = query.page ?? 1
+    const limit = query.limit ?? 20
 
     return {
       applications: applications.map((app) =>
@@ -77,7 +83,12 @@ export class AdminMentorshipController {
           excludeExtraneousValues: true
         })
       ),
-      total
+      meta: {
+        total,
+        page,
+        limit,
+        totalPages: Math.ceil(total / limit)
+      }
     }
   }
 
@@ -207,8 +218,11 @@ export class AdminMentorshipController {
   @ApiResponse({ status: 200 })
   async listAuditLogs(
     @Query() query: AdminListAuditLogsQueryDto
-  ): Promise<{ logs: AuditLog[]; total: number }> {
-    const { entityType, entityId, actorId, limit = 50, offset = 0 } = query
+  ): Promise<{
+    logs: AuditLog[]
+    meta: { total: number; page: number; limit: number; totalPages: number }
+  }> {
+    const { entityType, entityId, actorId } = query
 
     const qb = this.auditLogRepository
       .createQueryBuilder('log')
@@ -228,11 +242,22 @@ export class AdminMentorshipController {
 
     const [logs, total] = await qb
       .orderBy('log.createdAt', 'DESC')
-      .skip(offset)
-      .take(limit)
+      .skip(query.skip)
+      .take(query.take)
       .getManyAndCount()
 
-    return { logs, total }
+    const page = query.page ?? 1
+    const limit = query.limit ?? 50
+
+    return {
+      logs,
+      meta: {
+        total,
+        page,
+        limit,
+        totalPages: Math.ceil(total / limit)
+      }
+    }
   }
 
   @Get('applications/flagged')

@@ -22,6 +22,7 @@ import {
 } from '@nestjs/swagger'
 import { plainToInstance } from 'class-transformer'
 
+import { CurrentUser } from '../auth/decorators/current-user.decorator'
 import { Roles } from '../auth/decorators/roles.decorator'
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard'
 import { RolesGuard } from '../auth/guards/roles.guard'
@@ -107,9 +108,11 @@ export class UsersController {
     type: UserResponseDto
   })
   @ApiResponse({ status: 404, description: 'User not found' })
+  @ApiResponse({ status: 403, description: 'Cannot modify admin users' })
   async update(
     @Param('id', new ParseUUIDPipe()) id: string,
-    @Body() updateUserDto: UpdateUserDto
+    @Body() updateUserDto: UpdateUserDto,
+    @CurrentUser() currentUser: User
   ) {
     const user = await this.usersService.update(id, updateUserDto)
     return this.toResponse(user)
@@ -121,6 +124,7 @@ export class UsersController {
   @ApiOperation({ summary: 'Delete user' })
   @ApiResponse({ status: 204, description: 'User deleted successfully' })
   @ApiResponse({ status: 404, description: 'User not found' })
+  @ApiResponse({ status: 403, description: 'Cannot delete admin users' })
   async remove(@Param('id', new ParseUUIDPipe()) id: string) {
     await this.usersService.remove(id)
   }

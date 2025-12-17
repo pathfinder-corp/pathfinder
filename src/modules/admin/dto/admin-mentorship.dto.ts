@@ -24,6 +24,13 @@ export class AdminListApplicationsQueryDto {
   @IsUUID()
   userId?: string
 
+  @ApiPropertyOptional({ default: 1, minimum: 1 })
+  @IsOptional()
+  @Transform(({ value }) => parseInt(value, 10))
+  @IsInt()
+  @Min(1)
+  page?: number = 1
+
   @ApiPropertyOptional({ default: 20, minimum: 1, maximum: 100 })
   @IsOptional()
   @Transform(({ value }) => parseInt(value, 10))
@@ -32,12 +39,13 @@ export class AdminListApplicationsQueryDto {
   @Max(100)
   limit?: number = 20
 
-  @ApiPropertyOptional({ default: 0, minimum: 0 })
-  @IsOptional()
-  @Transform(({ value }) => parseInt(value, 10))
-  @IsInt()
-  @Min(0)
-  offset?: number = 0
+  get skip(): number {
+    return ((this.page ?? 1) - 1) * (this.limit ?? 20)
+  }
+
+  get take(): number {
+    return this.limit ?? 20
+  }
 }
 
 export class AdminRevokeMentorDto {
@@ -76,6 +84,13 @@ export class AdminListAuditLogsQueryDto {
   @IsUUID()
   actorId?: string
 
+  @ApiPropertyOptional({ default: 1, minimum: 1 })
+  @IsOptional()
+  @Transform(({ value }) => parseInt(value, 10))
+  @IsInt()
+  @Min(1)
+  page?: number = 1
+
   @ApiPropertyOptional({ default: 50, minimum: 1, maximum: 200 })
   @IsOptional()
   @Transform(({ value }) => parseInt(value, 10))
@@ -84,10 +99,11 @@ export class AdminListAuditLogsQueryDto {
   @Max(200)
   limit?: number = 50
 
-  @ApiPropertyOptional({ default: 0, minimum: 0 })
-  @IsOptional()
-  @Transform(({ value }) => parseInt(value, 10))
-  @IsInt()
-  @Min(0)
-  offset?: number = 0
+  get skip(): number {
+    return ((this.page ?? 1) - 1) * (this.limit ?? 50)
+  }
+
+  get take(): number {
+    return this.limit ?? 50
+  }
 }

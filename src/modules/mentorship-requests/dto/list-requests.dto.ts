@@ -17,6 +17,13 @@ export class ListRequestsQueryDto {
   @IsOptional()
   role?: 'as_student' | 'as_mentor'
 
+  @ApiPropertyOptional({ default: 1, minimum: 1 })
+  @IsOptional()
+  @Transform(({ value }) => parseInt(value, 10))
+  @IsInt()
+  @Min(1)
+  page?: number = 1
+
   @ApiPropertyOptional({ default: 20, minimum: 1, maximum: 100 })
   @IsOptional()
   @Transform(({ value }) => parseInt(value, 10))
@@ -25,10 +32,11 @@ export class ListRequestsQueryDto {
   @Max(100)
   limit?: number = 20
 
-  @ApiPropertyOptional({ default: 0, minimum: 0 })
-  @IsOptional()
-  @Transform(({ value }) => parseInt(value, 10))
-  @IsInt()
-  @Min(0)
-  offset?: number = 0
+  get skip(): number {
+    return ((this.page ?? 1) - 1) * (this.limit ?? 20)
+  }
+
+  get take(): number {
+    return this.limit ?? 20
+  }
 }

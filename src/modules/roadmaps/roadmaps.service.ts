@@ -11,7 +11,7 @@ import { InjectRepository } from '@nestjs/typeorm'
 import { instanceToPlain, plainToInstance } from 'class-transformer'
 import { In, Repository } from 'typeorm'
 
-import { User } from '../users/entities/user.entity'
+import { User, UserRole } from '../users/entities/user.entity'
 import {
   ExperienceLevel,
   GenerateRoadmapDto,
@@ -228,7 +228,8 @@ export class RoadmapsService {
 
   async getRoadmapById(
     userId: string,
-    roadmapId: string
+    roadmapId: string,
+    userRole: UserRole
   ): Promise<RoadmapResponseDto> {
     const roadmap = await this.roadmapsRepository.findOne({
       where: { id: roadmapId }
@@ -236,6 +237,11 @@ export class RoadmapsService {
 
     if (!roadmap) {
       throw new NotFoundException('Roadmap not found')
+    }
+
+    // Admins can access all roadmaps
+    if (userRole === UserRole.ADMIN) {
+      return this.toRoadmapResponse(roadmap, RoadmapAccessType.ADMIN)
     }
 
     const isOwner = roadmap.userId === userId

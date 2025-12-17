@@ -1,5 +1,6 @@
 import {
   ConflictException,
+  ForbiddenException,
   Injectable,
   NotFoundException
 } from '@nestjs/common'
@@ -9,7 +10,7 @@ import { Repository } from 'typeorm'
 
 import { CreateUserDto } from './dto/create-user.dto'
 import { UpdateUserDto } from './dto/update-user.dto'
-import { User, UserRole } from './entities/user.entity'
+import { User, UserRole, UserStatus } from './entities/user.entity'
 
 @Injectable()
 export class UsersService {
@@ -59,6 +60,17 @@ export class UsersService {
   async update(id: string, updateUserDto: UpdateUserDto): Promise<User> {
     const user = await this.findOne(id)
 
+    // Prevent modifying admin users' role or status (defense in depth)
+    if (user.role === UserRole.ADMIN) {
+      if (updateUserDto.role !== undefined && updateUserDto.role !== user.role) {
+        throw new ForbiddenException('Cannot modify admin user roles')
+      }
+      // Check if UpdateUserDto has status field (it extends CreateUserDto which may not have status)
+      if ((updateUserDto as any).status !== undefined && (updateUserDto as any).status !== user.status) {
+        throw new ForbiddenException('Cannot modify admin user status')
+      }
+    }
+
     if (updateUserDto.password) {
       updateUserDto.password = await bcrypt.hash(updateUserDto.password, 10)
     }
@@ -70,6 +82,12 @@ export class UsersService {
 
   async remove(id: string): Promise<void> {
     const user = await this.findOne(id)
+
+    // Prevent deleting admin users (defense in depth)
+    if (user.role === UserRole.ADMIN) {
+      throw new ForbiddenException('Cannot delete admin users')
+    }
+
     await this.userRepository.remove(user)
   }
 

@@ -138,8 +138,8 @@ export class MentorProfilesService {
       industries,
       languages,
       minYearsExperience,
-      limit = 20,
-      offset = 0
+      sortBy,
+      sortOrder
     } = query
 
     const qb = this.profileRepository
@@ -192,10 +192,16 @@ export class MentorProfilesService {
       })
     }
 
+    // Apply sorting
+    if (sortBy) {
+      qb.orderBy(`profile.${sortBy}`, sortOrder ?? 'DESC')
+    } else {
+      qb.orderBy('profile.createdAt', 'DESC')
+    }
+
     const [mentors, total] = await qb
-      .orderBy('profile.createdAt', 'DESC')
-      .skip(offset)
-      .take(limit)
+      .skip(query.skip)
+      .take(query.take)
       .getManyAndCount()
 
     return { mentors, total }

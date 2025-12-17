@@ -13,8 +13,7 @@ import { User } from '../../users/entities/user.entity'
 
 export enum MentorshipStatus {
   ACTIVE = 'active',
-  ENDED = 'ended',
-  PAUSED = 'paused'
+  ENDED = 'ended'
 }
 
 @Entity('mentorships')

@@ -44,8 +44,8 @@ export class NotificationsService {
   async findByUser(
     userId: string,
     options?: {
+      page?: number
       limit?: number
-      offset?: number
       unreadOnly?: boolean
     }
   ): Promise<{
@@ -53,19 +53,21 @@ export class NotificationsService {
     total: number
     unreadCount: number
   }> {
-    const { limit = 50, offset = 0, unreadOnly = false } = options ?? {}
+    const { page = 1, limit = 50, unreadOnly = false } = options ?? {}
 
     const whereClause: Record<string, any> = { userId }
     if (unreadOnly) {
       whereClause.isRead = false
     }
 
+    const skip = (page - 1) * limit
+
     const [notifications, total] =
       await this.notificationRepository.findAndCount({
         where: whereClause,
         order: { createdAt: 'DESC' },
         take: limit,
-        skip: offset
+        skip: skip
       })
 
     const unreadCount = await this.notificationRepository.count({

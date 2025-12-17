@@ -81,6 +81,19 @@ export class MentorshipListResponseDto {
   @Type(() => MentorshipResponseDto)
   mentorships: MentorshipResponseDto[]
 
-  @ApiProperty()
-  total: number
+  @ApiProperty({
+    description: 'Pagination metadata',
+    example: {
+      total: 100,
+      page: 1,
+      limit: 20,
+      totalPages: 5
+    }
+  })
+  meta: {
+    total: number
+    page: number
+    limit: number
+    totalPages: number
+  }
 }

@@ -1,11 +1,11 @@
-import { Injectable, NotFoundException } from '@nestjs/common'
+import { ForbiddenException, Injectable, NotFoundException } from '@nestjs/common'
 import { InjectRepository } from '@nestjs/typeorm'
 import { plainToInstance } from 'class-transformer'
 import { Repository } from 'typeorm'
 
 import { Assessment } from '../../assessments/entities/assessment.entity'
 import { Roadmap } from '../../roadmaps/entities/roadmap.entity'
-import { User } from '../../users/entities/user.entity'
+import { User, UserRole } from '../../users/entities/user.entity'
 import {
   AdminUpdateUserDto,
   AdminUserDetailResponseDto,
@@ -106,12 +106,23 @@ export class AdminUsersService {
 
   async update(
     id: string,
-    updateDto: AdminUpdateUserDto
+    updateDto: AdminUpdateUserDto,
+    currentUser: User
   ): Promise<AdminUserResponseDto> {
     const user = await this.usersRepository.findOne({ where: { id } })
 
     if (!user) {
       throw new NotFoundException(`User with ID ${id} not found`)
+    }
+
+    // Prevent modifying admin users' role or status
+    if (user.role === UserRole.ADMIN) {
+      if (updateDto.role !== undefined) {
+        throw new ForbiddenException('Cannot modify admin user roles')
+      }
+      if (updateDto.status !== undefined) {
+        throw new ForbiddenException('Cannot modify admin user status')
+      }
     }
 
     if (updateDto.role !== undefined) {
@@ -130,10 +141,18 @@ export class AdminUsersService {
   }
 
   async remove(id: string): Promise<void> {
-    const result = await this.usersRepository.delete(id)
+    // Check if user exists and get their role before deleting
+    const user = await this.usersRepository.findOne({ where: { id } })
 
-    if (!result.affected) {
+    if (!user) {
       throw new NotFoundException(`User with ID ${id} not found`)
     }
+
+    // Prevent deleting admin users
+    if (user.role === UserRole.ADMIN) {
+      throw new ForbiddenException('Cannot delete admin users')
+    }
+
+    await this.usersRepository.delete(id)
   }
 }
