@@ -62,11 +62,17 @@ export class UsersService {
 
     // Prevent modifying admin users' role or status (defense in depth)
     if (user.role === UserRole.ADMIN) {
-      if (updateUserDto.role !== undefined && updateUserDto.role !== user.role) {
+      if (
+        updateUserDto.role !== undefined &&
+        updateUserDto.role !== user.role
+      ) {
         throw new ForbiddenException('Cannot modify admin user roles')
       }
       // Check if UpdateUserDto has status field (it extends CreateUserDto which may not have status)
-      if ((updateUserDto as any).status !== undefined && (updateUserDto as any).status !== user.status) {
+      if (
+        (updateUserDto as any).status !== undefined &&
+        (updateUserDto as any).status !== user.status
+      ) {
         throw new ForbiddenException('Cannot modify admin user status')
       }
     }

@@ -111,7 +111,7 @@ export default () => {
         process.env.MENTOR_REAPPLY_COOLDOWN_DAYS,
         30
       ),
-      maxMessageLength: parseIntSafe(process.env.MAX_MESSAGE_LENGTH, 5000),
+      maxMessageLength: parseIntSafe(process.env.MAX_MESSAGE_LENGTH, 10000),
       defaultMeetingDurationMinutes: parseIntSafe(
         process.env.DEFAULT_MEETING_DURATION_MINUTES,
         60

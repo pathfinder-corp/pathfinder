@@ -66,7 +66,7 @@ export const envValidationSchema = Joi.object({
   // Mentorship configuration
   MENTORSHIP_REQUEST_EXPIRY_HOURS: Joi.number().min(1).default(72),
   MENTOR_REAPPLY_COOLDOWN_DAYS: Joi.number().min(0).default(30),
-  MAX_MESSAGE_LENGTH: Joi.number().min(100).max(50000).default(5000),
+  MAX_MESSAGE_LENGTH: Joi.number().min(100).max(50000).default(10000),
   DEFAULT_MEETING_DURATION_MINUTES: Joi.number().min(15).max(480).default(60),
   MEETING_REMINDER_HOURS: Joi.number().min(1).max(168).default(24),
   IP_BASED_RATE_LIMIT_PER_WEEK: Joi.number().min(1).max(100).default(10)

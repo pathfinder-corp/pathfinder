@@ -216,9 +216,7 @@ export class AdminMentorshipController {
   @Get('audit-logs')
   @ApiOperation({ summary: 'View audit logs' })
   @ApiResponse({ status: 200 })
-  async listAuditLogs(
-    @Query() query: AdminListAuditLogsQueryDto
-  ): Promise<{
+  async listAuditLogs(@Query() query: AdminListAuditLogsQueryDto): Promise<{
     logs: AuditLog[]
     meta: { total: number; page: number; limit: number; totalPages: number }
   }> {
