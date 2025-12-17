@@ -128,6 +128,38 @@ export class RoadmapContentDto {
   // Additional properties may be defined in extending DTOs
 }
 
+export class RoadmapOwnerDto {
+  @ApiProperty({
+    example: 'b8f82d24-5f0d-4b66-9df2-4388f080d2bf',
+    description: 'Unique identifier of the roadmap owner'
+  })
+  id!: string
+
+  @ApiProperty({
+    example: 'john.doe@example.com',
+    description: 'Email address of the owner'
+  })
+  email!: string
+
+  @ApiProperty({
+    example: 'John',
+    description: 'First name of the owner'
+  })
+  firstName!: string
+
+  @ApiProperty({
+    example: 'Doe',
+    description: 'Last name of the owner'
+  })
+  lastName!: string
+
+  @ApiPropertyOptional({
+    example: 'https://example.com/avatars/user.jpg',
+    description: 'Avatar URL of the owner'
+  })
+  avatar?: string
+}
+
 export class RoadmapResponseDto extends RoadmapContentDto {
   @ApiProperty({ example: 'b8f82d24-5f0d-4b66-9df2-4388f080d2bf' })
   id!: string
@@ -142,6 +174,13 @@ export class RoadmapResponseDto extends RoadmapContentDto {
 
   @ApiProperty({ example: false })
   isSharedWithAll!: boolean
+
+  @ApiProperty({
+    type: () => RoadmapOwnerDto,
+    description: 'Information about the roadmap owner'
+  })
+  @Type(() => RoadmapOwnerDto)
+  owner!: RoadmapOwnerDto
 
   @ApiProperty({ example: '2025-01-15T10:30:00.000Z' })
   createdAt!: string

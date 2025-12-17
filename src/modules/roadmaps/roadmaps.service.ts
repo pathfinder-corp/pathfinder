@@ -167,6 +167,9 @@ export class RoadmapsService {
         })
       )
 
+      // Attach user relation for response transformation
+      savedRoadmap.user = user
+
       return this.toRoadmapResponse(savedRoadmap, RoadmapAccessType.OWNER)
     } catch (error) {
       this.logger.error(
@@ -187,6 +190,7 @@ export class RoadmapsService {
   async getUserRoadmaps(userId: string): Promise<RoadmapResponseDto[]> {
     const roadmaps = await this.roadmapsRepository.find({
       where: { userId },
+      relations: ['user'],
       order: { createdAt: 'DESC' }
     })
 
@@ -199,6 +203,7 @@ export class RoadmapsService {
     const roadmaps = await this.roadmapsRepository
       .createQueryBuilder('roadmap')
       .innerJoin('roadmap.shares', 'share')
+      .leftJoinAndSelect('roadmap.user', 'user')
       .where('share.sharedWithUserId = :userId', { userId })
       .andWhere('roadmap.userId != :userId', { userId })
       .orderBy('roadmap.createdAt', 'DESC')
@@ -214,6 +219,7 @@ export class RoadmapsService {
       where: {
         isSharedWithAll: true
       },
+      relations: ['user'],
       order: { createdAt: 'DESC' }
     })
 
@@ -232,7 +238,8 @@ export class RoadmapsService {
     userRole: UserRole
   ): Promise<RoadmapResponseDto> {
     const roadmap = await this.roadmapsRepository.findOne({
-      where: { id: roadmapId }
+      where: { id: roadmapId },
+      relations: ['user']
     })
 
     if (!roadmap) {
@@ -538,6 +545,13 @@ export class RoadmapsService {
         milestones: roadmap.milestones ?? undefined,
         accessType,
         isSharedWithAll: roadmap.isSharedWithAll,
+        owner: {
+          id: roadmap.user.id,
+          email: roadmap.user.email,
+          firstName: roadmap.user.firstName,
+          lastName: roadmap.user.lastName,
+          avatar: roadmap.user.avatar
+        },
         createdAt: roadmap.createdAt.toISOString(),
         updatedAt: roadmap.updatedAt.toISOString()
       },
