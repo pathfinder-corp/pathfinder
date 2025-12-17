@@ -83,7 +83,6 @@ export class ContentValidatorService {
 
     // Ensure score doesn't go below 0
     score = Math.max(0, score)
-    console.log('score', score)
 
     const shouldFlag = score < this.minQualityScore
     const reason = shouldFlag

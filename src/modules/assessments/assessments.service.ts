@@ -321,7 +321,7 @@ export class AssessmentsService {
     userId: string,
     assessmentId: string,
     submitDto: SubmitAnswerDto
-  ): Promise<{ isCorrect: boolean }> {
+  ): Promise<{ isCorrect: boolean; correctAnswerIndex: number }> {
     const assessment = await this.assessmentsRepository.findOne({
       where: { id: assessmentId }
     })
@@ -381,7 +381,7 @@ export class AssessmentsService {
 
     await this.responsesRepository.save(response)
 
-    return { isCorrect }
+    return { isCorrect, correctAnswerIndex: question.correctAnswerIndex }
   }
 
   async deleteAssessment(userId: string, assessmentId: string): Promise<void> {

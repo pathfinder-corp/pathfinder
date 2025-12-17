@@ -13,6 +13,7 @@ import {
   LearningPace
 } from './dto/generate-roadmap.dto'
 import { RoadmapInsightRequestDto } from './dto/roadmap-insight.dto'
+import { RoadmapAccessType } from './dto/roadmap-response.dto'
 import { RoadmapShareStateDto, ShareRoadmapDto } from './dto/share-roadmap.dto'
 import { RoadmapShare } from './entities/roadmap-share.entity'
 import {
@@ -74,10 +75,12 @@ describe('RoadmapsService', () => {
   let service: RoadmapsService
   let repository: {
     findOne: jest.Mock
+    find: jest.Mock
     create: jest.Mock
     save: jest.Mock
     delete: jest.Mock
     exist: jest.Mock
+    createQueryBuilder: jest.Mock
   }
   let roadmapSharesRepository: {
     find: jest.Mock
@@ -114,10 +117,12 @@ describe('RoadmapsService', () => {
 
     repository = {
       findOne: jest.fn(),
+      find: jest.fn(),
       create: jest.fn(),
       save: jest.fn(),
       delete: jest.fn(),
-      exist: jest.fn()
+      exist: jest.fn(),
+      createQueryBuilder: jest.fn()
     }
 
     roadmapSharesRepository = {
@@ -334,6 +339,7 @@ describe('RoadmapsService', () => {
       expect(repository.save).toHaveBeenCalled()
       expect(result.id).toBe('roadmap-123')
       expect(result.topic).toBe('Full-stack web developer')
+      expect(result.accessType).toBe(RoadmapAccessType.OWNER)
       expect(result.isSharedWithAll).toBe(false)
     })
 
@@ -352,17 +358,18 @@ describe('RoadmapsService', () => {
   })
 
   describe('getRoadmapById', () => {
-    it('returns the roadmap for its owner', async () => {
+    it('returns the roadmap for its owner with accessType OWNER', async () => {
       const ownerRoadmap = { ...baseRoadmap, userId: 'owner-1' }
       repository.findOne.mockResolvedValue(ownerRoadmap)
 
       const result = await service.getRoadmapById('owner-1', ownerRoadmap.id)
 
       expect(result.id).toBe(ownerRoadmap.id)
+      expect(result.accessType).toBe(RoadmapAccessType.OWNER)
       expect(roadmapSharesRepository.exist).not.toHaveBeenCalled()
     })
 
-    it('allows access for explicitly shared users', async () => {
+    it('allows access for explicitly shared users with accessType SHARED', async () => {
       const sharedRoadmap = {
         ...baseRoadmap,
         userId: 'owner-1',
@@ -374,6 +381,7 @@ describe('RoadmapsService', () => {
       const result = await service.getRoadmapById('viewer-1', sharedRoadmap.id)
 
       expect(result.id).toBe(sharedRoadmap.id)
+      expect(result.accessType).toBe(RoadmapAccessType.SHARED)
       expect(roadmapSharesRepository.exist).toHaveBeenCalledWith({
         where: {
           roadmapId: sharedRoadmap.id,
@@ -382,7 +390,7 @@ describe('RoadmapsService', () => {
       })
     })
 
-    it('allows access when the roadmap is shared with all users', async () => {
+    it('allows access when the roadmap is shared with all users with accessType PUBLIC', async () => {
       const sharedWithAll = {
         ...baseRoadmap,
         userId: 'owner-1',
@@ -393,6 +401,7 @@ describe('RoadmapsService', () => {
       const result = await service.getRoadmapById('viewer-2', sharedWithAll.id)
 
       expect(result.id).toBe(sharedWithAll.id)
+      expect(result.accessType).toBe(RoadmapAccessType.PUBLIC)
       expect(roadmapSharesRepository.exist).not.toHaveBeenCalled()
     })
 
@@ -408,6 +417,135 @@ describe('RoadmapsService', () => {
       await expect(
         service.getRoadmapById('viewer-3', privateRoadmap.id)
       ).rejects.toBeInstanceOf(NotFoundException)
+    })
+  })
+
+  describe('getSharedRoadmaps', () => {
+    it('returns roadmaps explicitly shared with the user', async () => {
+      const sharedRoadmap1 = {
+        ...baseRoadmap,
+        id: 'roadmap-1',
+        userId: 'owner-1',
+        topic: 'Shared Topic 1'
+      }
+      const sharedRoadmap2 = {
+        ...baseRoadmap,
+        id: 'roadmap-2',
+        userId: 'owner-2',
+        topic: 'Shared Topic 2'
+      }
+
+      const queryBuilder = {
+        innerJoin: jest.fn().mockReturnThis(),
+        where: jest.fn().mockReturnThis(),
+        andWhere: jest.fn().mockReturnThis(),
+        orderBy: jest.fn().mockReturnThis(),
+        getMany: jest.fn().mockResolvedValue([sharedRoadmap1, sharedRoadmap2])
+      }
+
+      repository.createQueryBuilder.mockReturnValue(queryBuilder)
+
+      const result = await service.getSharedRoadmaps('viewer-1')
+
+      expect(result).toHaveLength(2)
+      expect(result[0].id).toBe('roadmap-1')
+      expect(result[0].accessType).toBe(RoadmapAccessType.SHARED)
+      expect(result[1].id).toBe('roadmap-2')
+      expect(result[1].accessType).toBe(RoadmapAccessType.SHARED)
+      expect(queryBuilder.where).toHaveBeenCalledWith(
+        'share.sharedWithUserId = :userId',
+        { userId: 'viewer-1' }
+      )
+      expect(queryBuilder.andWhere).toHaveBeenCalledWith(
+        'roadmap.userId != :userId',
+        { userId: 'viewer-1' }
+      )
+    })
+
+    it('returns empty array when no roadmaps are shared with the user', async () => {
+      const queryBuilder = {
+        innerJoin: jest.fn().mockReturnThis(),
+        where: jest.fn().mockReturnThis(),
+        andWhere: jest.fn().mockReturnThis(),
+        orderBy: jest.fn().mockReturnThis(),
+        getMany: jest.fn().mockResolvedValue([])
+      }
+
+      repository.createQueryBuilder.mockReturnValue(queryBuilder)
+
+      const result = await service.getSharedRoadmaps('viewer-1')
+
+      expect(result).toEqual([])
+    })
+  })
+
+  describe('getPublicRoadmaps', () => {
+    it('returns roadmaps shared with all users excluding user own roadmaps', async () => {
+      const publicRoadmap1 = {
+        ...baseRoadmap,
+        id: 'roadmap-1',
+        userId: 'owner-1',
+        topic: 'Public Topic 1',
+        isSharedWithAll: true
+      }
+      const publicRoadmap2 = {
+        ...baseRoadmap,
+        id: 'roadmap-2',
+        userId: 'owner-2',
+        topic: 'Public Topic 2',
+        isSharedWithAll: true
+      }
+      const ownPublicRoadmap = {
+        ...baseRoadmap,
+        id: 'roadmap-3',
+        userId: 'viewer-1',
+        topic: 'Own Public Roadmap',
+        isSharedWithAll: true
+      }
+
+      repository.find.mockResolvedValue([
+        publicRoadmap1,
+        publicRoadmap2,
+        ownPublicRoadmap
+      ])
+
+      const result = await service.getPublicRoadmaps('viewer-1')
+
+      expect(result).toHaveLength(2)
+      expect(result[0].id).toBe('roadmap-1')
+      expect(result[0].accessType).toBe(RoadmapAccessType.PUBLIC)
+      expect(result[1].id).toBe('roadmap-2')
+      expect(result[1].accessType).toBe(RoadmapAccessType.PUBLIC)
+      expect(repository.find).toHaveBeenCalledWith({
+        where: {
+          isSharedWithAll: true
+        },
+        order: { createdAt: 'DESC' }
+      })
+    })
+
+    it('returns empty array when no public roadmaps exist', async () => {
+      repository.find.mockResolvedValue([])
+
+      const result = await service.getPublicRoadmaps('viewer-1')
+
+      expect(result).toEqual([])
+    })
+
+    it('returns empty array when all public roadmaps belong to the user', async () => {
+      const ownPublicRoadmap = {
+        ...baseRoadmap,
+        id: 'roadmap-1',
+        userId: 'viewer-1',
+        topic: 'Own Public Roadmap',
+        isSharedWithAll: true
+      }
+
+      repository.find.mockResolvedValue([ownPublicRoadmap])
+
+      const result = await service.getPublicRoadmaps('viewer-1')
+
+      expect(result).toEqual([])
     })
   })
 

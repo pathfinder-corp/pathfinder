@@ -22,10 +22,12 @@ import {
   RoadmapInsightResponseDto
 } from './dto/roadmap-insight.dto'
 import {
+  RoadmapAccessType,
   RoadmapContentDto,
   RoadmapResponseDto
 } from './dto/roadmap-response.dto'
 import { RoadmapShareStateDto, ShareRoadmapDto } from './dto/share-roadmap.dto'
+import { SharedUserDto } from './dto/shared-user.dto'
 import { RoadmapShare } from './entities/roadmap-share.entity'
 import {
   Roadmap,
@@ -165,7 +167,7 @@ export class RoadmapsService {
         })
       )
 
-      return this.toRoadmapResponse(savedRoadmap)
+      return this.toRoadmapResponse(savedRoadmap, RoadmapAccessType.OWNER)
     } catch (error) {
       this.logger.error(
         'Failed to generate roadmap',
@@ -188,7 +190,40 @@ export class RoadmapsService {
       order: { createdAt: 'DESC' }
     })
 
-    return roadmaps.map((roadmap) => this.toRoadmapResponse(roadmap))
+    return roadmaps.map((roadmap) =>
+      this.toRoadmapResponse(roadmap, RoadmapAccessType.OWNER)
+    )
+  }
+
+  async getSharedRoadmaps(userId: string): Promise<RoadmapResponseDto[]> {
+    const roadmaps = await this.roadmapsRepository
+      .createQueryBuilder('roadmap')
+      .innerJoin('roadmap.shares', 'share')
+      .where('share.sharedWithUserId = :userId', { userId })
+      .andWhere('roadmap.userId != :userId', { userId })
+      .orderBy('roadmap.createdAt', 'DESC')
+      .getMany()
+
+    return roadmaps.map((roadmap) =>
+      this.toRoadmapResponse(roadmap, RoadmapAccessType.SHARED)
+    )
+  }
+
+  async getPublicRoadmaps(userId: string): Promise<RoadmapResponseDto[]> {
+    const roadmaps = await this.roadmapsRepository.find({
+      where: {
+        isSharedWithAll: true
+      },
+      order: { createdAt: 'DESC' }
+    })
+
+    const filteredRoadmaps = roadmaps.filter(
+      (roadmap) => roadmap.userId !== userId
+    )
+
+    return filteredRoadmaps.map((roadmap) =>
+      this.toRoadmapResponse(roadmap, RoadmapAccessType.PUBLIC)
+    )
   }
 
   async getRoadmapById(
@@ -204,9 +239,14 @@ export class RoadmapsService {
     }
 
     const isOwner = roadmap.userId === userId
+    let accessType: RoadmapAccessType
 
-    if (!isOwner) {
-      if (!roadmap.isSharedWithAll) {
+    if (isOwner) {
+      accessType = RoadmapAccessType.OWNER
+    } else {
+      if (roadmap.isSharedWithAll) {
+        accessType = RoadmapAccessType.PUBLIC
+      } else {
         const hasAccess = await this.roadmapSharesRepository.exist({
           where: {
             roadmapId,
@@ -217,10 +257,12 @@ export class RoadmapsService {
         if (!hasAccess) {
           throw new NotFoundException('Roadmap not found')
         }
+
+        accessType = RoadmapAccessType.SHARED
       }
     }
 
-    return this.toRoadmapResponse(roadmap)
+    return this.toRoadmapResponse(roadmap, accessType)
   }
 
   async deleteRoadmap(userId: string, roadmapId: string): Promise<void> {
@@ -414,6 +456,34 @@ export class RoadmapsService {
     }
   }
 
+  async getSharedUsers(
+    ownerId: string,
+    roadmapId: string
+  ): Promise<SharedUserDto[]> {
+    const roadmapExists = await this.roadmapsRepository.exist({
+      where: { id: roadmapId, userId: ownerId }
+    })
+
+    if (!roadmapExists) {
+      throw new NotFoundException('Roadmap not found')
+    }
+
+    const shares = await this.roadmapSharesRepository.find({
+      where: { roadmapId },
+      relations: ['sharedWith'],
+      order: { createdAt: 'DESC' }
+    })
+
+    return shares.map((share) => ({
+      id: share.sharedWith.id,
+      email: share.sharedWith.email,
+      firstName: share.sharedWith.firstName,
+      lastName: share.sharedWith.lastName,
+      avatar: share.sharedWith.avatar,
+      sharedAt: share.createdAt.toISOString()
+    }))
+  }
+
   private async buildRoadmapShareState(
     roadmapId: string,
     isSharedWithAll: boolean
@@ -445,7 +515,10 @@ export class RoadmapsService {
     }
   }
 
-  private toRoadmapResponse(roadmap: Roadmap): RoadmapResponseDto {
+  private toRoadmapResponse(
+    roadmap: Roadmap,
+    accessType: RoadmapAccessType
+  ): RoadmapResponseDto {
     return plainToInstance(
       RoadmapResponseDto,
       {
@@ -457,6 +530,7 @@ export class RoadmapsService {
         summary: roadmap.summary,
         phases: roadmap.phases,
         milestones: roadmap.milestones ?? undefined,
+        accessType,
         isSharedWithAll: roadmap.isSharedWithAll,
         createdAt: roadmap.createdAt.toISOString(),
         updatedAt: roadmap.updatedAt.toISOString()

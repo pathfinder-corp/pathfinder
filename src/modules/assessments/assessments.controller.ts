@@ -136,7 +136,7 @@ export class AssessmentsController {
   @ApiOperation({
     summary: 'Submit an answer for a question',
     description:
-      "Submit the user's answer for a specific question. Returns whether the answer was correct."
+      "Submit the user's answer for a specific question. Returns whether the answer was correct and the index of the correct answer."
   })
   @ApiResponse({
     status: 200,
@@ -144,7 +144,8 @@ export class AssessmentsController {
     schema: {
       type: 'object',
       properties: {
-        isCorrect: { type: 'boolean' }
+        isCorrect: { type: 'boolean', description: 'Whether the submitted answer was correct' },
+        correctAnswerIndex: { type: 'number', description: 'The index (0-3) of the correct answer option' }
       }
     }
   })
@@ -158,7 +159,7 @@ export class AssessmentsController {
     @CurrentUser() user: User,
     @Param('id') assessmentId: string,
     @Body() submitDto: SubmitAnswerDto
-  ): Promise<{ isCorrect: boolean }> {
+  ): Promise<{ isCorrect: boolean; correctAnswerIndex: number }> {
     return await this.assessmentsService.submitAnswer(
       user.id,
       assessmentId,

@@ -28,6 +28,7 @@ import {
 } from './dto/roadmap-insight.dto'
 import { RoadmapResponseDto } from './dto/roadmap-response.dto'
 import { RoadmapShareStateDto, ShareRoadmapDto } from './dto/share-roadmap.dto'
+import { SharedUserDto } from './dto/shared-user.dto'
 import { RoadmapsService } from './roadmaps.service'
 
 @ApiTags('Roadmaps')
@@ -67,6 +68,38 @@ export class RoadmapsController {
   })
   async getRoadmaps(@CurrentUser() user: User): Promise<RoadmapResponseDto[]> {
     return await this.roadmapsService.getUserRoadmaps(user.id)
+  }
+
+  @Get('shared')
+  @ApiOperation({
+    summary: 'List roadmaps shared privately with the authenticated user'
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Shared roadmaps retrieved successfully',
+    type: RoadmapResponseDto,
+    isArray: true
+  })
+  async getSharedRoadmaps(
+    @CurrentUser() user: User
+  ): Promise<RoadmapResponseDto[]> {
+    return await this.roadmapsService.getSharedRoadmaps(user.id)
+  }
+
+  @Get('public')
+  @ApiOperation({
+    summary: 'List roadmaps shared publicly by other users'
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Public roadmaps retrieved successfully',
+    type: RoadmapResponseDto,
+    isArray: true
+  })
+  async getPublicRoadmaps(
+    @CurrentUser() user: User
+  ): Promise<RoadmapResponseDto[]> {
+    return await this.roadmapsService.getPublicRoadmaps(user.id)
   }
 
   @Get(':id')
@@ -140,6 +173,25 @@ export class RoadmapsController {
     @Param('id') roadmapId: string
   ): Promise<RoadmapShareStateDto> {
     return await this.roadmapsService.getShareState(user.id, roadmapId)
+  }
+
+  @Get(':id/shared-users')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: 'Get list of users with whom the roadmap is shared'
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Shared users retrieved successfully',
+    type: SharedUserDto,
+    isArray: true
+  })
+  @ApiResponse({ status: 404, description: 'Roadmap not found' })
+  async getSharedUsers(
+    @CurrentUser() user: User,
+    @Param('id') roadmapId: string
+  ): Promise<SharedUserDto[]> {
+    return await this.roadmapsService.getSharedUsers(user.id, roadmapId)
   }
 
   @Post(':id/share')

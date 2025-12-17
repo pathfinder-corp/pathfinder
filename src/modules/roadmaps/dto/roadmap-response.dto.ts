@@ -3,6 +3,12 @@ import { Type } from 'class-transformer'
 
 import { ExperienceLevel, LearningPace } from './generate-roadmap.dto'
 
+export enum RoadmapAccessType {
+  OWNER = 'owner',
+  SHARED = 'shared',
+  PUBLIC = 'public'
+}
+
 export class RoadmapResourceDto {
   @ApiProperty({ example: 'Video Course' })
   type!: string
@@ -124,6 +130,14 @@ export class RoadmapContentDto {
 export class RoadmapResponseDto extends RoadmapContentDto {
   @ApiProperty({ example: 'b8f82d24-5f0d-4b66-9df2-4388f080d2bf' })
   id!: string
+
+  @ApiProperty({
+    enum: RoadmapAccessType,
+    example: RoadmapAccessType.OWNER,
+    description:
+      'Access type indicating the relationship between the user and the roadmap'
+  })
+  accessType!: RoadmapAccessType
 
   @ApiProperty({ example: false })
   isSharedWithAll!: boolean
