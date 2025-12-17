@@ -11,8 +11,8 @@ import {
   AssessmentShareStateDto,
   ShareAssessmentDto
 } from './dto/share-assessment.dto'
-import { Assessment } from './entities/assessment.entity'
 import { AssessmentShare } from './entities/assessment-share.entity'
+import { Assessment } from './entities/assessment.entity'
 
 @Injectable()
 export class AssessmentSharingService {
@@ -163,5 +163,3 @@ export class AssessmentSharingService {
     }
   }
 }
-
-

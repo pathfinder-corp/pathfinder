@@ -22,8 +22,8 @@ import { User } from '../users/entities/user.entity'
 import { AssessmentResultsService } from './assessment-results.service'
 import { AssessmentSharingService } from './assessment-sharing.service'
 import { AssessmentsService } from './assessments.service'
-import { AssessmentResultResponseDto } from './dto/assessment-result-response.dto'
 import { AssessmentResponseDto } from './dto/assessment-response.dto'
+import { AssessmentResultResponseDto } from './dto/assessment-result-response.dto'
 import { CreateAssessmentDto } from './dto/create-assessment.dto'
 import {
   AssessmentShareStateDto,
@@ -72,7 +72,8 @@ export class AssessmentsController {
   @Get()
   @ApiOperation({
     summary: 'Get all assessments for the current user',
-    description: 'Returns a list of all assessments created by the current user.'
+    description:
+      'Returns a list of all assessments created by the current user.'
   })
   @ApiResponse({
     status: 200,
@@ -135,7 +136,7 @@ export class AssessmentsController {
   @ApiOperation({
     summary: 'Submit an answer for a question',
     description:
-      'Submit the user\'s answer for a specific question. Returns whether the answer was correct.'
+      "Submit the user's answer for a specific question. Returns whether the answer was correct."
   })
   @ApiResponse({
     status: 200,
@@ -272,7 +273,10 @@ export class AssessmentsController {
     description: 'Access revoked successfully'
   })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
-  @ApiResponse({ status: 404, description: 'Assessment or shared user not found' })
+  @ApiResponse({
+    status: 404,
+    description: 'Assessment or shared user not found'
+  })
   async revokeShare(
     @CurrentUser() user: User,
     @Param('id') assessmentId: string,
@@ -305,5 +309,3 @@ export class AssessmentsController {
     await this.assessmentsService.deleteAssessment(user.id, assessmentId)
   }
 }
-
-

@@ -71,4 +71,3 @@ export class AdminDashboardController {
     return this.adminStatsService.getAssessmentStats()
   }
 }
-

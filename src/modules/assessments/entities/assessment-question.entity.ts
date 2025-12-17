@@ -7,8 +7,8 @@ import {
   PrimaryGeneratedColumn
 } from 'typeorm'
 
-import { Assessment } from './assessment.entity'
 import { AssessmentResponse } from './assessment-response.entity'
+import { Assessment } from './assessment.entity'
 
 export type QuestionResource = {
   type: string
@@ -52,5 +52,3 @@ export class AssessmentQuestion {
   @OneToMany(() => AssessmentResponse, (response) => response.question)
   responses?: AssessmentResponse[]
 }
-
-

@@ -2,7 +2,10 @@ import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger'
 import { Expose, Type } from 'class-transformer'
 import { IsBoolean, IsOptional, IsString, IsUUID } from 'class-validator'
 
-import { ExperienceLevel, LearningPace } from '../../roadmaps/dto/generate-roadmap.dto'
+import {
+  ExperienceLevel,
+  LearningPace
+} from '../../roadmaps/dto/generate-roadmap.dto'
 import { PaginationQueryDto } from './pagination.dto'
 
 export class AdminRoadmapQueryDto extends PaginationQueryDto {
@@ -99,4 +102,3 @@ export class AdminRoadmapDetailResponseDto extends AdminRoadmapResponseDto {
   @Expose()
   shareCount: number
 }
-

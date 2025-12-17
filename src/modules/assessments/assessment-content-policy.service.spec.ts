@@ -81,9 +81,7 @@ describe('AssessmentContentPolicyService', () => {
         { questionText: 'Explain the concept of closures' }
       ]
 
-      expect(() =>
-        service.validateGeneratedQuestions(questions)
-      ).not.toThrow()
+      expect(() => service.validateGeneratedQuestions(questions)).not.toThrow()
     })
 
     it('should reject questions with sensitive content', () => {
@@ -97,5 +95,3 @@ describe('AssessmentContentPolicyService', () => {
     })
   })
 })
-
-

@@ -1,5 +1,12 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger'
-import { IsInt, IsNotEmpty, IsOptional, IsUUID, Max, Min } from 'class-validator'
+import {
+  IsInt,
+  IsNotEmpty,
+  IsOptional,
+  IsUUID,
+  Max,
+  Min
+} from 'class-validator'
 
 export class SubmitAnswerDto {
   @ApiProperty({
@@ -31,5 +38,3 @@ export class SubmitAnswerDto {
   @Min(0)
   timeSpent?: number
 }
-
-

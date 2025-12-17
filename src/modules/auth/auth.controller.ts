@@ -25,6 +25,7 @@ import { CurrentUser } from './decorators/current-user.decorator'
 import { AuthResponseDto } from './dto/auth-response.dto'
 import { LoginDto } from './dto/login.dto'
 import { RegisterDto } from './dto/register.dto'
+import { VerifyEmailDto } from './dto/verify-email.dto'
 import { JwtAuthGuard } from './guards/jwt-auth.guard'
 
 @ApiTags('Authentication')
@@ -133,5 +134,39 @@ export class AuthController {
   @ApiResponse({ status: 401, description: 'Unauthorized' })
   getProfile(@CurrentUser() user: User) {
     return user
+  }
+
+  @Post('verify-email')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Verify email address' })
+  @ApiResponse({
+    status: 200,
+    description: 'Email verified successfully'
+  })
+  @ApiResponse({ status: 400, description: 'Invalid or expired token' })
+  async verifyEmail(@Body() dto: VerifyEmailDto): Promise<{ message: string }> {
+    await this.authService.verifyEmail(dto.token)
+    return { message: 'Email verified successfully' }
+  }
+
+  @Post('resend-verification')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Resend email verification' })
+  @ApiResponse({
+    status: 200,
+    description: 'Verification email sent'
+  })
+  @ApiResponse({
+    status: 400,
+    description: 'Email already verified or rate limited'
+  })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  async resendVerification(
+    @CurrentUser() user: User
+  ): Promise<{ message: string }> {
+    await this.authService.resendVerificationEmail(user.id)
+    return { message: 'Verification email sent' }
   }
 }

@@ -1,219 +1,198 @@
-<p align="center">
-  <a href="http://nestjs.com/" target="blank"><img src="https://nestjs.com/img/logo-small.svg" width="120" alt="Nest Logo" /></a>
-</p>
+# Pathfinder - Backend
 
-[circleci-image]: https://img.shields.io/circleci/build/github/nestjs/nest/master?token=abc123def456
-[circleci-url]: https://circleci.com/gh/nestjs/nest
+A NestJS backend for career pathfinding with assessments, roadmaps, and mentorship matching.
 
-  <p align="center">A progressive <a href="http://nodejs.org" target="_blank">Node.js</a> framework for building efficient and scalable server-side applications.</p>
-    <p align="center">
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/v/@nestjs/core.svg" alt="NPM Version" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/l/@nestjs/core.svg" alt="Package License" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/dm/@nestjs/common.svg" alt="NPM Downloads" /></a>
-<a href="https://circleci.com/gh/nestjs/nest" target="_blank"><img src="https://img.shields.io/circleci/build/github/nestjs/nest/master" alt="CircleCI" /></a>
-<a href="https://discord.gg/G7Qnnhy" target="_blank"><img src="https://img.shields.io/badge/discord-online-brightgreen.svg" alt="Discord"/></a>
-<a href="https://opencollective.com/nest#backer" target="_blank"><img src="https://opencollective.com/nest/backers/badge.svg" alt="Backers on Open Collective" /></a>
-<a href="https://opencollective.com/nest#sponsor" target="_blank"><img src="https://opencollective.com/nest/sponsors/badge.svg" alt="Sponsors on Open Collective" /></a>
-  <a href="https://paypal.me/kamilmysliwiec" target="_blank"><img src="https://img.shields.io/badge/Donate-PayPal-ff3f59.svg" alt="Donate us"/></a>
-    <a href="https://opencollective.com/nest#sponsor"  target="_blank"><img src="https://img.shields.io/badge/Support%20us-Open%20Collective-41B883.svg" alt="Support us"></a>
-  <a href="https://twitter.com/nestframework" target="_blank"><img src="https://img.shields.io/twitter/follow/nestframework.svg?style=social&label=Follow" alt="Follow us on Twitter"></a>
-</p>
-  <!--[![Backers on Open Collective](https://opencollective.com/nest/backers/badge.svg)](https://opencollective.com/nest#backer)
-  [![Sponsors on Open Collective](https://opencollective.com/nest/sponsors/badge.svg)](https://opencollective.com/nest#sponsor)-->
+## Features
 
-## Description
+- **Authentication**: JWT-based auth with role-based access control (student, mentor, admin)
+- **Assessments**: AI-generated skill assessments with Gemini integration
+- **Roadmaps**: Personalized learning paths
+- **Mentorship System**: Complete mentor-student matching platform
 
-AI-powered academic and career pathway recommendation API built with [NestJS](https://github.com/nestjs/nest). It exposes authentication, user management, and now an AI-driven roadmap generator powered by Google Gemini (Gemini 2.5 Flash).
+## Mentorship System
 
-## Roadmap Generator API
+The mentorship module enables students to connect with mentors through:
 
-The roadmap generator creates actionable learning plans tailored to a user's target topic, experience level, pacing preference, and constraints. It integrates with Google Gemini via the `@google/genai` SDK.
+- **Mentor Applications**: Users apply to become mentors; admins review and approve
+- **Mentor Profiles**: Mentors maintain public profiles with expertise, skills, and availability
+- **Student Preferences**: Students define their mentoring needs and goals
+- **Recommendations**: Rule-based (+ Gemini-ready) mentor matching
+- **Booking**: Multi-slot requests with mentor acceptance
+- **Meetings**: Scheduling with double-booking prevention
+- **Messaging**: Thread-based communication for applications, requests, and mentorships
+- **Notifications**: In-app notifications for all key events
 
-### Environment Variables
+See [Mentorship README](src/modules/mentorship/README.md) for detailed documentation.
 
-Add the following variables to your `.env` file:
+## Getting Started
 
-| Variable                  | Required | Default            | Description                                 |
-| ------------------------- | -------- | ------------------ | ------------------------------------------- |
-| `GENAI_API_KEY`           | ✅       | –                  | Google Gemini API key.                      |
-| `GENAI_MODEL`             | ❌       | `gemini-2.5-flash` | Gemini model name to use.                   |
-| `GENAI_TEMPERATURE`       | ❌       | `0.4`              | Controls creativity (0-2).                  |
-| `GENAI_TOP_P`             | ❌       | `0.95`             | Nucleus sampling parameter (0-1).           |
-| `GENAI_TOP_K`             | ❌       | `32`               | Limits candidate tokens considered (1-200). |
-| `GENAI_MAX_OUTPUT_TOKENS` | ❌       | `32768`            | Maximum tokens in the response (1-8192).    |
+### Prerequisites
 
-### Endpoint
+- Node.js 18+
+- PostgreSQL 14+
+- Yarn 4.x
 
-- `POST /roadmaps`
-  - Requires a valid JWT (`Authorization: Bearer <token>`)
-  - Body payload:
-
-```json
-{
-  "topic": "Full-stack web developer",
-  "experienceLevel": "beginner",
-  "learningPace": "balanced",
-  "background": "Computer science graduate with basic JavaScript",
-  "targetOutcome": "Break into a junior front-end role",
-  "timeframe": "6 months",
-  "preferences": "Prefer project-based learning with open resources"
-}
-```
-
-### Response
-
-```json
-{
-  "id": "b8f82d24-5f0d-4b66-9df2-4388f080d2bf",
-  "topic": "Full-stack web developer",
-  "experienceLevel": "beginner",
-  "learningPace": "balanced",
-  "timeframe": "6 months",
-  "summary": {
-    "recommendedCadence": "5-8 hours per week",
-    "recommendedDuration": "5-6 months",
-    "successTips": ["Track weekly goals", "Publish projects for feedback"],
-    "additionalNotes": "Emphasize fundamentals before frameworks."
-  },
-  "phases": [
-    {
-      "title": "Foundations",
-      "outcome": "Comfortably build responsive websites",
-      "estimatedDuration": "6 weeks",
-      "steps": [
-        {
-          "title": "Master semantic HTML and CSS",
-          "description": "Learn layout systems, accessibility, and responsive design.",
-          "estimatedDuration": "2 weeks",
-          "keyActivities": [
-            "Build a personal site",
-            "Complete CSS Grid exercises"
-          ],
-          "resources": [
-            {
-              "type": "Video Course",
-              "title": "freeCodeCamp Responsive Web Design",
-              "url": "https://www.freecodecamp.org/learn/",
-              "description": "Project-led curriculum for HTML, CSS, and accessibility."
-            }
-          ]
-        }
-      ]
-    }
-  ],
-  "milestones": [
-    {
-      "title": "Launch responsive personal site",
-      "successCriteria": "Site passes Lighthouse accessibility score of 90+."
-    }
-  ],
-  "isSharedWithAll": false,
-  "createdAt": "2025-01-15T10:30:00.000Z",
-  "updatedAt": "2025-01-15T10:30:00.000Z"
-}
-```
-
-### Sharing Roadmaps
-
-Once a roadmap is generated, owners can share view-only access with specific registered users or make it discoverable to anyone who knows the roadmap ID.
-
-- `GET /roadmaps/:id/share`
-  - Returns the current sharing configuration.
-  - Response shape:
-
-    ```json
-    {
-      "isSharedWithAll": false,
-      "sharedWithUserIds": ["user-id-1", "user-id-2"]
-    }
-    ```
-
-- `POST /roadmaps/:id/share`
-  - Updates the sharing configuration.
-  - Body payload (`shareWithAll` and `userIds` are both optional; omit a field to keep the current value):
-
-    ```json
-    {
-      "shareWithAll": true,
-      "userIds": ["user-id-1", "user-id-2"]
-    }
-    ```
-
-  - Responds with the updated configuration shown above.
-
-- `DELETE /roadmaps/:id/share/:userId`
-  - Revokes access for an explicitly shared user.
-
-Shared recipients can view a roadmap via `GET /roadmaps/:id`, but only the owner can modify, delete, or request AI insights for it. Publicly shared roadmaps (`isSharedWithAll: true`) remain hidden from listings; a viewer still needs the exact roadmap ID.
-
-## Project setup
+### Installation
 
 ```bash
-$ npm install
+yarn install
 ```
 
-## Compile and run the project
+### Configuration
+
+Copy `.env.example` to `.env` and configure:
+
+```env
+# Database
+DATABASE_HOST=localhost
+DATABASE_PORT=5432
+DATABASE_USER=postgres
+DATABASE_PASSWORD=your_password
+DATABASE_NAME=pathfinder
+
+# JWT
+JWT_SECRET=your-32-char-secret-key-here
+
+# Email Verification
+EMAIL_VERIFICATION_REQUIRED=true
+EMAIL_VERIFICATION_TOKEN_EXPIRY_HOURS=24
+
+# IP Tracking & Privacy (GDPR-compliant)
+IP_HASH_SALT=your-random-salt-string-min-16-chars
+
+# Content Validation for Mentor Applications
+CONTENT_VALIDATION_ENABLED=true
+MIN_CONTENT_QUALITY_SCORE=60
+SPAM_KEYWORDS=buy now,click here,limited offer,click below,act now
+
+# Gemini AI
+GENAI_API_KEY=your_api_key
+
+# Mentorship (optional - defaults shown)
+MENTORSHIP_REQUEST_EXPIRY_HOURS=72
+MENTOR_REAPPLY_COOLDOWN_DAYS=30
+MAX_MESSAGE_LENGTH=5000
+IP_BASED_RATE_LIMIT_PER_WEEK=10
+```
+
+### Database Migration
 
 ```bash
-# development
-$ npm run start
-
-# watch mode
-$ npm run start:dev
-
-# production mode
-$ npm run start:prod
+yarn migration:run
 ```
 
-## Run tests
+### Running
 
 ```bash
-# unit tests
-$ npm run test
+# Development
+yarn dev
 
-# e2e tests
-$ npm run test:e2e
-
-# test coverage
-$ npm run test:cov
+# Production
+yarn build
+yarn start
 ```
 
-## Deployment
-
-When you're ready to deploy your NestJS application to production, there are some key steps you can take to ensure it runs as efficiently as possible. Check out the [deployment documentation](https://docs.nestjs.com/deployment) for more information.
-
-If you are looking for a cloud-based platform to deploy your NestJS application, check out [Mau](https://mau.nestjs.com), our official platform for deploying NestJS applications on AWS. Mau makes deployment straightforward and fast, requiring just a few simple steps:
+### Testing
 
 ```bash
-$ npm install -g @nestjs/mau
-$ mau deploy
+# Unit tests
+yarn test
+
+# E2E tests
+yarn test:e2e
+
+# Coverage
+yarn test:cov
 ```
 
-With Mau, you can deploy your application in just a few clicks, allowing you to focus on building features rather than managing infrastructure.
+## API Documentation
 
-## Resources
+Swagger documentation is available at `/api/docs` when `ENABLE_SWAGGER=true`.
 
-Check out a few resources that may come in handy when working with NestJS:
+## User Roles & Registration
 
-- Visit the [NestJS Documentation](https://docs.nestjs.com) to learn more about the framework.
-- For questions and support, please visit our [Discord channel](https://discord.gg/G7Qnnhy).
-- To dive deeper and get more hands-on experience, check out our official video [courses](https://courses.nestjs.com/).
-- Deploy your application to AWS with the help of [NestJS Mau](https://mau.nestjs.com) in just a few clicks.
-- Visualize your application graph and interact with the NestJS application in real-time using [NestJS Devtools](https://devtools.nestjs.com).
-- Need help with your project (part-time to full-time)? Check out our official [enterprise support](https://enterprise.nestjs.com).
-- To stay in the loop and get updates, follow us on [X](https://x.com/nestframework) and [LinkedIn](https://linkedin.com/company/nestjs).
-- Looking for a job, or have a job to offer? Check out our official [Jobs board](https://jobs.nestjs.com).
+### Default Role on Registration
+All new user registrations are automatically assigned the **STUDENT** role by default. This ensures secure role management and prevents privilege escalation during registration.
 
-## Support
+### Role Hierarchy
+- **STUDENT** (default) - Can search mentors, create requests, participate in mentorships
+- **MENTOR** - Granted through application approval, can update profiles and accept requests
+- **ADMIN** - Full system access, manages applications and mentorships
 
-Nest is an MIT-licensed open source project. It can grow thanks to the sponsors and support by the amazing backers. If you'd like to join them, please [read more here](https://docs.nestjs.com/support).
+### Role Transitions
+- **Student → Mentor**: Submit and get approval for a mentor application
+- **Admin Protection**: Administrators cannot apply to become mentors to preserve their administrative privileges
 
-## Stay in touch
+## Mentor Application Security
 
-- Author - [Kamil Myśliwiec](https://twitter.com/kammysliwiec)
-- Website - [https://nestjs.com](https://nestjs.com/)
-- Twitter - [@nestframework](https://twitter.com/nestframework)
+To prevent fake mentor applications, the system implements multiple security layers:
+
+### 1. Email Verification (Required)
+- All users must verify their email address before applying to become a mentor
+- Verification emails expire after 24 hours (configurable)
+- Users can resend verification emails with rate limiting (2-minute cooldown)
+
+### 2. Rate Limiting
+- **Per-user**: 5 applications per week (enforced via @Throttle decorator)
+- **Per-IP**: 10 applications per week from the same IP address (configurable)
+
+### 3. IP-Based Tracking
+- Client IP addresses are hashed using SHA-256 with a configurable salt
+- GDPR-compliant: stores only hashed IPs, never plain IPs
+- Admins can view IP hash statistics to identify suspicious patterns
+
+### 4. Content Quality Validation
+Applications are automatically scanned for:
+- Repeated characters (spam detection)
+- Spam keywords (configurable list)
+- Suspicious URLs (non-HTTPS, URL shorteners)
+- Low word diversity (copy-paste detection)
+- Excessive special characters
+- Gibberish content (vowel/consonant ratio analysis)
+
+Applications flagged by content validation receive a quality score (0-100). If the score is below the threshold (default: 60), the application is marked as **FLAGGED** and requires additional admin review before entering the normal approval queue.
+
+### 5. Admin Review Tools
+Admins have access to:
+- `/admin/applications/flagged` - List all flagged applications with content flags
+- `/admin/applications/:id/unflag` - Manually move flagged application to PENDING status
+- `/admin/applications/ip-statistics` - View IP hashes with multiple applications
+
+### Security Configuration
+See environment variables above for:
+- `EMAIL_VERIFICATION_REQUIRED` - Enforce email verification
+- `IP_HASH_SALT` - Salt for IP hashing (min 16 characters)
+- `CONTENT_VALIDATION_ENABLED` - Enable/disable content validation
+- `MIN_CONTENT_QUALITY_SCORE` - Threshold for flagging (0-100)
+- `SPAM_KEYWORDS` - Comma-separated list of spam keywords
+- `IP_BASED_RATE_LIMIT_PER_WEEK` - Max applications per IP hash per week
+
+## Project Structure
+
+```
+src/
+├── common/           # Shared entities, services, filters
+├── config/           # App configuration
+├── migrations/       # TypeORM migrations
+└── modules/
+    ├── admin/        # Admin dashboard and management
+    ├── assessments/  # Skill assessments
+    ├── auth/         # Authentication
+    ├── mail/         # Email service
+    ├── meetings/     # Meeting scheduling
+    ├── mentor-applications/   # Mentor applications
+    ├── mentor-profiles/       # Mentor profiles
+    ├── mentorship-requests/   # Booking requests
+    ├── mentorships/  # Mentorship lifecycle
+    ├── messages/     # Thread messaging
+    ├── notifications/ # In-app notifications
+    ├── recommendations/       # Mentor matching
+    ├── roadmaps/     # Learning roadmaps
+    ├── scheduler/    # Background jobs
+    ├── student-preferences/   # Student preferences
+    └── users/        # User management
+```
 
 ## License
 
-Nest is [MIT licensed](https://github.com/nestjs/nest/blob/master/LICENSE).
+See [LICENSE](LICENSE) file.

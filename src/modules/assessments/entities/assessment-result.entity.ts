@@ -50,6 +50,6 @@ export class AssessmentResult {
   @Column({ name: 'suggested_roadmaps', type: 'jsonb', nullable: true })
   suggestedRoadmaps?: SuggestedRoadmap[] | null
 
-  @CreateDateColumn({ name: 'completed_at' })
+  @CreateDateColumn({ name: 'completed_at', type: 'timestamptz' })
   completedAt!: Date
 }

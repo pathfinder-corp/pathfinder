@@ -93,6 +93,49 @@ export default () => {
     passwordResetTokenExpiry: parseIntSafe(
       process.env.PASSWORD_RESET_TOKEN_EXPIRY,
       60
-    )
+    ),
+    ipHashSalt: process.env.IP_HASH_SALT || 'default-insecure-salt',
+    emailVerification: {
+      required: parseBoolean(process.env.EMAIL_VERIFICATION_REQUIRED, true),
+      tokenExpiryHours: parseIntSafe(
+        process.env.EMAIL_VERIFICATION_TOKEN_EXPIRY_HOURS,
+        24
+      )
+    },
+    mentorship: {
+      requestExpiryHours: parseIntSafe(
+        process.env.MENTORSHIP_REQUEST_EXPIRY_HOURS,
+        72
+      ),
+      reapplyCooldownDays: parseIntSafe(
+        process.env.MENTOR_REAPPLY_COOLDOWN_DAYS,
+        30
+      ),
+      maxMessageLength: parseIntSafe(process.env.MAX_MESSAGE_LENGTH, 5000),
+      defaultMeetingDurationMinutes: parseIntSafe(
+        process.env.DEFAULT_MEETING_DURATION_MINUTES,
+        60
+      ),
+      meetingReminderHours: parseIntSafe(
+        process.env.MEETING_REMINDER_HOURS,
+        24
+      ),
+      ipBasedRateLimitPerWeek: parseIntSafe(
+        process.env.IP_BASED_RATE_LIMIT_PER_WEEK,
+        10
+      ),
+      contentValidation: {
+        enabled: parseBoolean(process.env.CONTENT_VALIDATION_ENABLED, true),
+        minQualityScore: parseIntSafe(
+          process.env.MIN_CONTENT_QUALITY_SCORE,
+          60
+        ),
+        spamKeywords: (
+          process.env.SPAM_KEYWORDS || 'buy now,click here,limited offer'
+        )
+          .split(',')
+          .map((k) => k.trim())
+      }
+    }
   }
 }

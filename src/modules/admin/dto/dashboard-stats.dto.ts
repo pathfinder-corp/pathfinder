@@ -133,4 +133,3 @@ export class AssessmentStatsDto {
   @ApiProperty({ type: [AssessmentTrendDto] })
   creationTrend: AssessmentTrendDto[]
 }
-

@@ -24,12 +24,11 @@ export class PasswordResetToken {
   @JoinColumn({ name: 'userId' })
   user: User
 
-  @Column()
+  @Column({ type: 'timestamptz' })
   expiresAt: Date
 
   @Column({ default: false })
   used: boolean
-
-  @CreateDateColumn()
+  @CreateDateColumn({ type: 'timestamptz' })
   createdAt: Date
 }

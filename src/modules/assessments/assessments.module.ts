@@ -38,5 +38,3 @@ import { Assessment } from './entities/assessment.entity'
   ]
 })
 export class AssessmentsModule {}
-
-

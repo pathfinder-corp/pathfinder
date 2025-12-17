@@ -5,8 +5,8 @@ import { Repository } from 'typeorm'
 
 import { User } from '../users/entities/user.entity'
 import { AssessmentSharingService } from './assessment-sharing.service'
-import { Assessment, AssessmentDifficulty } from './entities/assessment.entity'
 import { AssessmentShare } from './entities/assessment-share.entity'
+import { Assessment, AssessmentDifficulty } from './entities/assessment.entity'
 
 describe('AssessmentSharingService', () => {
   let service: AssessmentSharingService
@@ -121,5 +121,3 @@ describe('AssessmentSharingService', () => {
     })
   })
 })
-
-

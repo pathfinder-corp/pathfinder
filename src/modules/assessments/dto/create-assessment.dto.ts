@@ -1,5 +1,13 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger'
-import { IsEnum, IsInt, IsNotEmpty, IsOptional, IsString, Max, Min } from 'class-validator'
+import {
+  IsEnum,
+  IsInt,
+  IsNotEmpty,
+  IsOptional,
+  IsString,
+  Max,
+  Min
+} from 'class-validator'
 
 import { AssessmentDifficulty } from '../entities/assessment.entity'
 
@@ -35,5 +43,3 @@ export class CreateAssessmentDto {
   @Max(20)
   questionCount?: number
 }
-
-

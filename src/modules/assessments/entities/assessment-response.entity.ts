@@ -7,8 +7,8 @@ import {
   PrimaryGeneratedColumn
 } from 'typeorm'
 
-import { Assessment } from './assessment.entity'
 import { AssessmentQuestion } from './assessment-question.entity'
+import { Assessment } from './assessment.entity'
 
 @Entity('assessment_responses')
 export class AssessmentResponse {
@@ -42,8 +42,6 @@ export class AssessmentResponse {
   @Column({ name: 'time_spent', type: 'int', nullable: true })
   timeSpent?: number | null
 
-  @CreateDateColumn({ name: 'created_at' })
+  @CreateDateColumn({ name: 'created_at', type: 'timestamptz' })
   createdAt!: Date
 }
-
-

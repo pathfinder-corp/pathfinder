@@ -35,6 +35,6 @@ export class RoadmapShare {
   @JoinColumn({ name: 'shared_with_user_id' })
   sharedWith!: User
 
-  @CreateDateColumn({ name: 'created_at' })
+  @CreateDateColumn({ name: 'created_at', type: 'timestamptz' })
   createdAt!: Date
 }

@@ -9,7 +9,7 @@ import { Repository } from 'typeorm'
 
 import { CreateUserDto } from './dto/create-user.dto'
 import { UpdateUserDto } from './dto/update-user.dto'
-import { User } from './entities/user.entity'
+import { User, UserRole } from './entities/user.entity'
 
 @Injectable()
 export class UsersService {
@@ -29,7 +29,10 @@ export class UsersService {
 
     const user = this.userRepository.create({
       ...createUserDto,
-      password: hashedPassword
+      password: hashedPassword,
+      // Explicitly set role to STUDENT if not provided
+      // This ensures new registrations always start as students
+      role: createUserDto.role || UserRole.STUDENT
     })
 
     return await this.userRepository.save(user)

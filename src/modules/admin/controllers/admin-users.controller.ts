@@ -89,4 +89,3 @@ export class AdminUsersController {
     await this.adminUsersService.remove(id)
   }
 }
-

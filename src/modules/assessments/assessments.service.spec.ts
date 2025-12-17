@@ -7,14 +7,14 @@ import { User } from '../users/entities/user.entity'
 import { AssessmentContentPolicyService } from './assessment-content-policy.service'
 import { AssessmentsService } from './assessments.service'
 import { CreateAssessmentDto } from './dto/create-assessment.dto'
+import { AssessmentQuestion } from './entities/assessment-question.entity'
+import { AssessmentResponse } from './entities/assessment-response.entity'
+import { AssessmentShare } from './entities/assessment-share.entity'
 import {
   Assessment,
   AssessmentDifficulty,
   AssessmentStatus
 } from './entities/assessment.entity'
-import { AssessmentQuestion } from './entities/assessment-question.entity'
-import { AssessmentResponse } from './entities/assessment-response.entity'
-import { AssessmentShare } from './entities/assessment-share.entity'
 
 describe('AssessmentsService', () => {
   let service: AssessmentsService
@@ -245,5 +245,3 @@ describe('AssessmentsService', () => {
     })
   })
 })
-
-

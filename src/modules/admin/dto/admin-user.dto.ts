@@ -88,4 +88,3 @@ export class AdminUserDetailResponseDto extends AdminUserResponseDto {
   @Expose()
   assessmentCount: number
 }
-

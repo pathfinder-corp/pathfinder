@@ -1,11 +1,11 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger'
 import { Exclude, Expose, Type } from 'class-transformer'
 
+import { QuestionResource } from '../entities/assessment-question.entity'
 import {
   AssessmentDifficulty,
   AssessmentStatus
 } from '../entities/assessment.entity'
-import { QuestionResource } from '../entities/assessment-question.entity'
 
 @Exclude()
 export class AssessmentQuestionDto {
@@ -80,5 +80,3 @@ export class AssessmentResponseDto {
   @ApiProperty({ description: 'Assessment last update timestamp' })
   updatedAt!: string
 }
-
-

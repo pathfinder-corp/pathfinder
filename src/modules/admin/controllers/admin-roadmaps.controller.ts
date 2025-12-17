@@ -71,4 +71,3 @@ export class AdminRoadmapsController {
     await this.adminRoadmapsService.remove(id)
   }
 }
-

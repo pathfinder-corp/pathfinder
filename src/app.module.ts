@@ -1,11 +1,13 @@
 import { Module } from '@nestjs/common'
 import { ConfigModule, ConfigService } from '@nestjs/config'
 import { APP_GUARD } from '@nestjs/core'
+import { ScheduleModule } from '@nestjs/schedule'
 import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler'
 import { TypeOrmModule } from '@nestjs/typeorm'
 
 import { AppController } from './app.controller'
 import { AppService } from './app.service'
+import { CommonModule } from './common/common.module'
 import appConfig from './config/app.config'
 import { getDatabaseConfig } from './config/database.config'
 import { envValidationSchema } from './config/env.validation'
@@ -13,7 +15,16 @@ import { AdminModule } from './modules/admin/admin.module'
 import { AssessmentsModule } from './modules/assessments/assessments.module'
 import { AuthModule } from './modules/auth/auth.module'
 import { MailModule } from './modules/mail/mail.module'
+import { MentorApplicationsModule } from './modules/mentor-applications/mentor-applications.module'
+import { MentorProfilesModule } from './modules/mentor-profiles/mentor-profiles.module'
+import { MentorshipRequestsModule } from './modules/mentorship-requests/mentorship-requests.module'
+import { MentorshipsModule } from './modules/mentorships/mentorships.module'
+import { MessagesModule } from './modules/messages/messages.module'
+import { NotificationsModule } from './modules/notifications/notifications.module'
+import { RecommendationsModule } from './modules/recommendations/recommendations.module'
 import { RoadmapsModule } from './modules/roadmaps/roadmaps.module'
+import { SchedulerModule } from './modules/scheduler/scheduler.module'
+import { StudentPreferencesModule } from './modules/student-preferences/student-preferences.module'
 import { UsersModule } from './modules/users/users.module'
 
 @Module({
@@ -42,12 +53,23 @@ import { UsersModule } from './modules/users/users.module'
       inject: [ConfigService],
       useFactory: getDatabaseConfig
     }),
+    ScheduleModule.forRoot(),
+    CommonModule,
     UsersModule,
     AuthModule,
     MailModule,
     RoadmapsModule,
     AssessmentsModule,
-    AdminModule
+    AdminModule,
+    NotificationsModule,
+    MentorApplicationsModule,
+    MentorProfilesModule,
+    StudentPreferencesModule,
+    RecommendationsModule,
+    MentorshipRequestsModule,
+    MentorshipsModule,
+    MessagesModule,
+    SchedulerModule
   ],
   controllers: [AppController],
   providers: [

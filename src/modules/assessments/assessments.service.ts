@@ -20,16 +20,16 @@ import {
 import { CreateAssessmentDto } from './dto/create-assessment.dto'
 import { SubmitAnswerDto } from './dto/submit-answer.dto'
 import {
-  Assessment,
-  AssessmentDifficulty,
-  AssessmentStatus
-} from './entities/assessment.entity'
-import {
   AssessmentQuestion,
   QuestionResource
 } from './entities/assessment-question.entity'
 import { AssessmentResponse } from './entities/assessment-response.entity'
 import { AssessmentShare } from './entities/assessment-share.entity'
+import {
+  Assessment,
+  AssessmentDifficulty,
+  AssessmentStatus
+} from './entities/assessment.entity'
 
 type GenerationSettings = Pick<
   GenerationConfig,
@@ -605,5 +605,3 @@ Ensure all strings use double quotes and the JSON is strictly valid.`
     )
   }
 }
-
-

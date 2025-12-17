@@ -34,6 +34,10 @@ export class UserResponseDto {
   avatar?: string
 
   @Expose()
+  @ApiProperty({ description: 'Whether user email is verified' })
+  emailVerified: boolean
+
+  @Expose()
   @ApiProperty()
   createdAt: Date
 

@@ -73,4 +73,3 @@ export class AdminAssessmentsController {
     await this.adminAssessmentsService.remove(id)
   }
 }
-

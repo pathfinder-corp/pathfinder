@@ -1,6 +1,12 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger'
 import { Expose, Type } from 'class-transformer'
-import { IsBoolean, IsEnum, IsOptional, IsString, IsUUID } from 'class-validator'
+import {
+  IsBoolean,
+  IsEnum,
+  IsOptional,
+  IsString,
+  IsUUID
+} from 'class-validator'
 
 import {
   AssessmentDifficulty,
@@ -113,4 +119,3 @@ export class AdminAssessmentDetailResponseDto extends AdminAssessmentResponseDto
     completedAt: Date
   }
 }
-

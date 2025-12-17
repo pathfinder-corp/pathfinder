@@ -60,17 +60,33 @@ export class User {
   @Column({ nullable: true })
   avatar?: string
 
-  @CreateDateColumn()
+  @CreateDateColumn({ type: 'timestamptz' })
   createdAt: Date
 
-  @UpdateDateColumn()
+  @UpdateDateColumn({ type: 'timestamptz' })
   updatedAt: Date
 
-  @Column({ nullable: true })
+  @Column({ type: 'timestamptz', nullable: true })
   lastLoginAt?: Date
 
-  @Column({ nullable: true })
+  @Column({ type: 'timestamptz', nullable: true })
   lastLogoutAt?: Date
+
+  @Column({ default: false, name: 'email_verified' })
+  emailVerified: boolean
+
+  @Column({ nullable: true, name: 'email_verification_token' })
+  emailVerificationToken?: string
+
+  @Column({
+    type: 'timestamptz',
+    nullable: true,
+    name: 'email_verification_sent_at'
+  })
+  emailVerificationSentAt?: Date
+
+  @Column({ type: 'timestamptz', nullable: true, name: 'email_verified_at' })
+  emailVerifiedAt?: Date
 
   @OneToMany(() => Roadmap, (roadmap) => roadmap.user)
   roadmaps?: Roadmap[]

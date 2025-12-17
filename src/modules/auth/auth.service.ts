@@ -17,11 +17,12 @@ import { ForgotPasswordDto } from '../users/dto/forgot-password.dto'
 import { ResetPasswordDto } from '../users/dto/reset-password.dto'
 import { UserResponseDto } from '../users/dto/user-response.dto'
 import { PasswordResetToken } from '../users/entities/password-reset-token.entity'
-import { User } from '../users/entities/user.entity'
+import { User, UserStatus } from '../users/entities/user.entity'
 import { UsersService } from '../users/users.service'
 import { AuthResponseDto } from './dto/auth-response.dto'
 import { LoginDto } from './dto/login.dto'
 import { RegisterDto } from './dto/register.dto'
+import { EmailVerificationToken } from './entities/email-verification-token.entity'
 import { JwtPayload } from './strategies/jwt.strategy'
 
 @Injectable()
@@ -34,11 +35,18 @@ export class AuthService {
     private readonly configService: ConfigService,
     private readonly mailService: MailService,
     @InjectRepository(PasswordResetToken)
-    private readonly passwordResetTokenRepository: Repository<PasswordResetToken>
+    private readonly passwordResetTokenRepository: Repository<PasswordResetToken>,
+    @InjectRepository(EmailVerificationToken)
+    private readonly emailVerificationTokenRepository: Repository<EmailVerificationToken>,
+    @InjectRepository(User)
+    private readonly userRepository: Repository<User>
   ) {}
 
   async register(registerDto: RegisterDto): Promise<AuthResponseDto> {
     const user = await this.usersService.create(registerDto)
+
+    // Send verification email
+    await this.sendVerificationEmail(user.id)
 
     const payload: JwtPayload = {
       sub: user.id,
@@ -67,7 +75,7 @@ export class AuthService {
       throw new UnauthorizedException('Invalid credentials')
     }
 
-    if (user.status !== 'active') {
+    if (user.status !== UserStatus.ACTIVE) {
       throw new UnauthorizedException('Account is not active')
     }
 
@@ -139,7 +147,8 @@ export class AuthService {
       await this.mailService.sendPasswordResetEmail(
         user.email,
         resetToken,
-        user.firstName
+        user.firstName,
+        expiryMinutes
       )
     } catch (error) {
       if (error instanceof Error) {
@@ -178,15 +187,13 @@ export class AuthService {
       throw new BadRequestException('Reset token has expired')
     }
 
-    if (resetToken.user.status !== 'active') {
+    if (resetToken.user.status !== UserStatus.ACTIVE) {
       throw new BadRequestException('User account is not active')
     }
 
-    const hashedPassword = await bcrypt.hash(newPassword, 10)
-
     await this.usersService.update(resetToken.userId, {
-      password: hashedPassword
-    } as any)
+      password: newPassword
+    })
 
     resetToken.used = true
     await this.passwordResetTokenRepository.save(resetToken)
@@ -238,6 +245,116 @@ export class AuthService {
     }
 
     return { valid: true }
+  }
+
+  async sendVerificationEmail(userId: string): Promise<void> {
+    const user = await this.usersService.findOne(userId)
+
+    if (!user) {
+      throw new BadRequestException('User not found')
+    }
+
+    if (user.emailVerified) {
+      throw new BadRequestException('Email already verified')
+    }
+
+    // Generate verification token
+    const token = randomUUID()
+    const expiryHours = this.configService.get<number>(
+      'emailVerification.tokenExpiryHours',
+      24
+    )
+    const expiresAt = new Date()
+    expiresAt.setHours(expiresAt.getHours() + expiryHours)
+
+    // Save token to database
+    const verificationToken = this.emailVerificationTokenRepository.create({
+      userId,
+      token,
+      expiresAt
+    })
+    await this.emailVerificationTokenRepository.save(verificationToken)
+
+    // Update user with token info
+    await this.userRepository.update(userId, {
+      emailVerificationToken: token,
+      emailVerificationSentAt: new Date()
+    })
+
+    // Send email
+    await this.mailService.sendEmailVerification(
+      user.email,
+      token,
+      user.firstName
+    )
+
+    this.logger.log(`Email verification sent to user ${userId}`)
+  }
+
+  async verifyEmail(token: string): Promise<boolean> {
+    const verificationToken =
+      await this.emailVerificationTokenRepository.findOne({
+        where: { token },
+        relations: ['user']
+      })
+
+    if (!verificationToken) {
+      throw new BadRequestException('Invalid verification token')
+    }
+
+    if (verificationToken.used) {
+      throw new BadRequestException('Verification token already used')
+    }
+
+    if (new Date() > verificationToken.expiresAt) {
+      throw new BadRequestException('Verification token expired')
+    }
+
+    // Mark token as used
+    verificationToken.used = true
+    await this.emailVerificationTokenRepository.save(verificationToken)
+
+    // Update user
+    await this.userRepository.update(verificationToken.userId, {
+      emailVerified: true,
+      emailVerifiedAt: new Date(),
+      emailVerificationToken: undefined
+    })
+
+    this.logger.log(`Email verified for user ${verificationToken.userId}`)
+    return true
+  }
+
+  async resendVerificationEmail(userId: string): Promise<void> {
+    const user = await this.usersService.findOne(userId)
+
+    if (!user) {
+      throw new BadRequestException('User not found')
+    }
+
+    if (user.emailVerified) {
+      throw new BadRequestException('Email already verified')
+    }
+
+    // Check if email was sent recently (prevent spam)
+    if (user.emailVerificationSentAt) {
+      const minutesSinceLastSent =
+        (Date.now() - user.emailVerificationSentAt.getTime()) / 1000 / 60
+      if (minutesSinceLastSent < 2) {
+        throw new BadRequestException(
+          'Please wait a few minutes before requesting another verification email'
+        )
+      }
+    }
+
+    // Invalidate old tokens
+    await this.emailVerificationTokenRepository.update(
+      { userId, used: false },
+      { used: true }
+    )
+
+    // Send new verification email
+    await this.sendVerificationEmail(userId)
   }
 
   private buildAuthResponse(user: User, accessToken: string): AuthResponseDto {

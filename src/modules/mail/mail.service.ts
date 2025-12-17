@@ -38,13 +38,18 @@ export class MailService {
   async sendPasswordResetEmail(
     to: string,
     resetToken: string,
-    userName: string
+    userFirstName: string,
+    expiryMinutes: number
   ): Promise<void> {
     const frontendUrl = this.configService.get<string>('frontendUrl')
     const resetLink = `${frontendUrl}/reset-password?token=${resetToken}`
     const mailFrom = this.configService.get('mail.from')
 
-    const html = this.getPasswordResetEmailTemplate(userName, resetLink)
+    const html = this.getPasswordResetEmailTemplate(
+      userFirstName,
+      resetLink,
+      expiryMinutes
+    )
 
     if (!this.transporter) {
       this.logger.warn(
@@ -57,7 +62,7 @@ export class MailService {
       await this.transporter.sendMail({
         from: mailFrom,
         to,
-        subject: 'Đặt Lại Mật Khẩu - Pathfinder',
+        subject: 'Reset your password',
         html
       })
 
@@ -69,223 +74,197 @@ export class MailService {
   }
 
   private getPasswordResetEmailTemplate(
-    userName: string,
-    resetLink: string
+    userFirstName: string,
+    resetLink: string,
+    expiryMinutes: number
   ): string {
     return `
-      <!DOCTYPE html>
-      <html lang="vi">
-        <head>
-          <meta charset="utf-8">
-          <meta name="viewport" content="width=device-width, initial-scale=1.0">
-          <style>
-            body {
-              font-family: 'Segoe UI', Arial, sans-serif;
-              line-height: 1.6;
-              color: #333;
-              max-width: 600px;
-              margin: 0 auto;
-              padding: 20px;
-              background-color: #f5f5f5;
-            }
-            .container {
-              background-color: #ffffff;
-              border-radius: 12px;
-              padding: 40px;
-              margin: 20px 0;
-              box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-            }
-            .header {
-              text-align: center;
-              color: #2563eb;
-              margin-bottom: 30px;
-            }
-            .header h1 {
-              margin: 0;
-              font-size: 24px;
-            }
-            .button {
-              display: inline-block;
-              padding: 14px 40px;
-              background-color: #2563eb;
-              color: #ffffff !important;
-              text-decoration: none;
-              border-radius: 8px;
-              margin: 25px 0;
-              font-weight: bold;
-              font-size: 16px;
-              transition: background-color 0.3s;
-            }
-            .button:hover {
-              background-color: #1d4ed8;
-            }
-            .button-container {
-              text-align: center;
-              margin: 30px 0;
-            }
-            .footer {
-              margin-top: 40px;
-              padding-top: 20px;
-              border-top: 1px solid #e5e7eb;
-              font-size: 13px;
-              color: #6b7280;
-            }
-            .warning {
-              background-color: #fef3c7;
-              border-left: 4px solid #f59e0b;
-              padding: 16px;
-              margin: 25px 0;
-              border-radius: 4px;
-            }
-            .warning strong {
-              color: #92400e;
-            }
-            .warning ul {
-              margin: 10px 0 0 0;
-              padding-left: 20px;
-            }
-            .warning li {
-              margin: 5px 0;
-              color: #78350f;
-            }
-            .copy-link {
-              background-color: #f3f4f6;
-              border: 1px solid #d1d5db;
-              border-radius: 6px;
-              padding: 12px;
-              margin: 15px 0;
-              word-break: break-all;
-              font-size: 12px;
-              color: #6b7280;
-            }
-            .copy-link-label {
-              font-size: 13px;
-              color: #6b7280;
-              margin-bottom: 8px;
-            }
-          </style>
-        </head>
-        <body>
-          <div class="container">
-            <div class="header">
-              <h1>🔐 Yêu Cầu Đặt Lại Mật Khẩu</h1>
-            </div>
-            
-            <p>Xin chào <strong>${userName}</strong>,</p>
-            
-            <p>Chúng tôi nhận được yêu cầu đặt lại mật khẩu cho tài khoản Pathfinder của bạn.</p>
-            
-            <p>Vui lòng nhấn vào nút bên dưới để đặt lại mật khẩu:</p>
-            
-            <div class="button-container">
-              <a href="${resetLink}" class="button">Nhấn để đặt lại mật khẩu</a>
-            </div>
-            
-            <div class="warning">
-              <strong>⚠️ Lưu ý bảo mật:</strong>
-              <ul>
-                <li>Liên kết này sẽ hết hạn sau <strong>15 phút</strong></li>
-                <li>Nếu bạn không yêu cầu đặt lại mật khẩu, vui lòng bỏ qua email này</li>
-                <li>Không chia sẻ liên kết này với bất kỳ ai</li>
-              </ul>
-            </div>
+    <table
+  role="presentation"
+  class="container"
+  width="100%"
+  cellpadding="0"
+  cellspacing="0"
+>
+  <tr>
+    <td align="center">
+      <table
+        role="presentation"
+        class="email-wrap"
+        width="100%"
+        cellpadding="0"
+        cellspacing="0"
+        style="max-width: 600px"
+      >
+        <tr>
+          <td style="background: #0b0b0b; padding: 28px; border-radius: 8px">
+            <table
+              role="presentation"
+              width="100%"
+              cellpadding="0"
+              cellspacing="0"
+            >
+              <tr>
+                <td
+                  style="
+                    color: #d6d6d6;
+                    font-size: 14px;
+                    line-height: 20px;
+                    padding-bottom: 18px;
+                  "
+                >
+                  Hi ${userFirstName}, we received a request to reset your
+                  password. Use the button below to proceed. If you didn't
+                  request this, you can ignore this message. This link will
+                  expire in ${expiryMinutes} minutes.
+                </td>
+              </tr>
 
-            <p class="copy-link-label">Hoặc sao chép và dán liên kết này vào trình duyệt:</p>
-            <div class="copy-link">${resetLink}</div>
-            
-            <div class="footer">
-              <p>Trân trọng,<br><strong>Đội ngũ Pathfinder</strong></p>
-              <p style="font-size: 11px; color: #9ca3af; margin-top: 15px;">
-                Đây là email tự động. Vui lòng không trả lời email này.
-              </p>
-            </div>
-          </div>
-        </body>
-      </html>
-    `
+              <tr>
+                <td align="left" style="padding-bottom: 14px">
+                  <!-- Light button on dark background (bordered) -->
+                  <table role="presentation" cellpadding="0" cellspacing="0">
+                    <tr>
+                      <td
+                        align="center"
+                        style="border-radius: 6px; background: #ffffff"
+                      >
+                        <a
+                          href="${resetLink}"
+                          class="btn"
+                          target="_blank"
+                          style="
+                            display: inline-block;
+                            padding: 12px 20px;
+                            color: #111111;
+                            font-weight: 600;
+                            text-decoration: none;
+                            border-radius: 6px;
+                          "
+                          >Reset password</a
+                        >
+                      </td>
+                    </tr>
+                  </table>
+                </td>
+              </tr>
+
+              <tr>
+                <td style="color: #8f8f8f; font-size: 12px; line-height: 18px">
+                  If the button doesn't work, copy and paste this link into your
+                  browser:<br /><a
+                    href="${resetLink}"
+                    style="color: #ffffff; word-break: break-all"
+                    >${resetLink}</a
+                  >
+                </td>
+              </tr>
+            </table>
+          </td>
+        </tr>
+
+        <tr>
+          <td
+            style="
+              padding-top: 12px;
+              text-align: center;
+              color: #9b9b9b;
+              font-size: 12px;
+            "
+          >
+            © ${new Date().getFullYear()} Pathfinder. All rights reserved.
+          </td>
+        </tr>
+      </table>
+    </td>
+  </tr>
+</table>
+`
   }
 
   async sendPasswordResetSuccessEmail(
     to: string,
-    userName: string
+    userFirstName: string
   ): Promise<void> {
     const mailFrom = this.configService.get('mail.from')
 
     const html = `
-      <!DOCTYPE html>
-      <html lang="vi">
-        <head>
-          <meta charset="utf-8">
-          <meta name="viewport" content="width=device-width, initial-scale=1.0">
-          <style>
-            body {
-              font-family: 'Segoe UI', Arial, sans-serif;
-              line-height: 1.6;
-              color: #333;
-              max-width: 600px;
-              margin: 0 auto;
-              padding: 20px;
-              background-color: #f5f5f5;
-            }
-            .container {
-              background-color: #ffffff;
-              border-radius: 12px;
-              padding: 40px;
-              box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-            }
-            .success-icon {
-              text-align: center;
-              font-size: 64px;
-              margin-bottom: 20px;
-            }
-            .success-title {
-              text-align: center;
-              color: #059669;
-              margin: 0 0 30px 0;
-              font-size: 24px;
-            }
-            .alert-box {
-              background-color: #fef2f2;
-              border-left: 4px solid #dc2626;
-              padding: 16px;
-              margin: 25px 0;
-              border-radius: 4px;
-            }
-            .alert-box p {
-              margin: 0;
-              color: #991b1b;
-            }
-            .footer {
-              margin-top: 40px;
-              padding-top: 20px;
-              border-top: 1px solid #e5e7eb;
-              color: #6b7280;
-              font-size: 13px;
-            }
-          </style>
-        </head>
-        <body>
-          <div class="container">
-            <div class="success-icon">✅</div>
-            <h2 class="success-title">Đặt Lại Mật Khẩu Thành Công</h2>
-            
-            <p>Xin chào <strong>${userName}</strong>,</p>
-            
-            <p>Mật khẩu của bạn đã được đặt lại thành công. Bạn có thể đăng nhập bằng mật khẩu mới ngay bây giờ.</p>
-            
-            <div class="alert-box">
-              <p><strong>⚠️ Bảo mật:</strong> Nếu bạn không thực hiện thay đổi này, vui lòng liên hệ với đội ngũ hỗ trợ của chúng tôi ngay lập tức.</p>
-            </div>
-            
-            <div class="footer">
-              <p>Trân trọng,<br><strong>Đội ngũ Pathfinder</strong></p>
-              <p style="font-size: 11px; color: #9ca3af; margin-top: 15px;">
-                Đây là email tự động. Vui lòng không trả lời email này.
-              </p>
-            </div>
-          </div>
-        </body>
-      </html>
+      <table
+      role="presentation"
+      class="container"
+      width="100%"
+      cellpadding="0"
+      cellspacing="0"
+    >
+      <tr>
+        <td align="center">
+          <table
+            role="presentation"
+            class="email-wrap"
+            width="100%"
+            cellpadding="0"
+            cellspacing="0"
+            style="max-width: 600px"
+          >
+            <tr>
+              <td style="background: #0b0b0b; padding: 28px; border-radius: 8px">
+                <table
+                  role="presentation"
+                  width="100%"
+                  cellpadding="0"
+                  cellspacing="0"
+                >
+                  <tr>
+                    <td
+                      style="
+                        color: #d6d6d6;
+                        font-size: 14px;
+                        line-height: 20px;
+                        padding-bottom: 18px;
+                      "
+                    >
+                      Hi ${userFirstName}, your password has been successfully reset. You can now sign in to your account using your new password.
+                    </td>
+                  </tr>
+
+                  <tr>
+                    <td
+                      style="
+                        color: #d6d6d6;
+                        font-size: 14px;
+                        line-height: 20px;
+                        padding-bottom: 18px;
+                      "
+                    >
+                      If you did not make this change, please contact our support team immediately to secure your account.
+                    </td>
+                  </tr>
+
+                  <tr>
+                    <td style="color: #8f8f8f; font-size: 12px; line-height: 18px">
+                      For your security, we recommend using a strong, unique password and enabling two-factor authentication if available.
+                    </td>
+                  </tr>
+                </table>
+              </td>
+            </tr>
+
+            <tr>
+              <td
+                style="
+                  padding-top: 12px;
+                  text-align: center;
+                  color: #9b9b9b;
+                  font-size: 12px;
+                "
+              >
+                © ${new Date().getFullYear()} Pathfinder. All rights reserved.
+              </td>
+            </tr>
+          </table>
+        </td>
+      </tr>
+    </table>
     `
 
     if (!this.transporter) {
@@ -299,7 +278,7 @@ export class MailService {
       await this.transporter.sendMail({
         from: mailFrom,
         to,
-        subject: 'Đặt Lại Mật Khẩu Thành Công - Pathfinder',
+        subject: 'Your password has been reset',
         html
       })
 
@@ -307,5 +286,144 @@ export class MailService {
     } catch (error) {
       this.logger.error(`Failed to send email to ${to}:`, error)
     }
+  }
+
+  async sendEmailVerification(
+    to: string,
+    token: string,
+    firstName: string
+  ): Promise<void> {
+    if (!this.transporter) {
+      this.logger.warn('Mail transporter not configured. Skipping email.')
+      return
+    }
+
+    const frontendUrl = this.configService.get<string>('frontendUrl')
+    const verifyLink = `${frontendUrl}/verify-email?token=${token}`
+    const mailFrom = this.configService.get('mail.from')
+
+    const html = this.getEmailVerificationTemplate(firstName, verifyLink)
+
+    try {
+      await this.transporter.sendMail({
+        from: mailFrom,
+        to,
+        subject: 'Verify your email address',
+        html
+      })
+
+      this.logger.log(`Email verification sent to ${to}`)
+    } catch (error) {
+      this.logger.error(`Failed to send email to ${to}:`, error)
+      throw new Error('Failed to send email verification')
+    }
+  }
+
+  private getEmailVerificationTemplate(
+    firstName: string,
+    verifyLink: string
+  ): string {
+    return `
+    <table
+  role="presentation"
+  class="container"
+  width="100%"
+  cellpadding="0"
+  cellspacing="0"
+>
+  <tr>
+    <td align="center">
+      <table
+        role="presentation"
+        class="email-wrap"
+        width="100%"
+        cellpadding="0"
+        cellspacing="0"
+        style="max-width: 600px"
+      >
+        <tr>
+          <td style="background: #0b0b0b; padding: 28px; border-radius: 8px">
+            <table
+              role="presentation"
+              width="100%"
+              cellpadding="0"
+              cellspacing="0"
+            >
+              <tr>
+                <td
+                  style="
+                    color: #d6d6d6;
+                    font-size: 14px;
+                    line-height: 20px;
+                    padding-bottom: 18px;
+                  "
+                >
+                  Hi ${firstName}, thank you for signing up! Please verify your
+                  email address by clicking the button below. If you didn't create
+                  an account, you can safely ignore this email. This link will
+                  expire in 24 hours.
+                </td>
+              </tr>
+
+              <tr>
+                <td align="left" style="padding-bottom: 14px">
+                  <!-- Light button on dark background (bordered) -->
+                  <table role="presentation" cellpadding="0" cellspacing="0">
+                    <tr>
+                      <td
+                        align="center"
+                        style="border-radius: 6px; background: #ffffff"
+                      >
+                        <a
+                          href="${verifyLink}"
+                          class="btn"
+                          target="_blank"
+                          style="
+                            display: inline-block;
+                            padding: 12px 20px;
+                            color: #111111;
+                            font-weight: 600;
+                            text-decoration: none;
+                            border-radius: 6px;
+                          "
+                          >Verify email address</a
+                        >
+                      </td>
+                    </tr>
+                  </table>
+                </td>
+              </tr>
+
+              <tr>
+                <td style="color: #8f8f8f; font-size: 12px; line-height: 18px">
+                  If the button doesn't work, copy and paste this link into your
+                  browser:<br /><a
+                    href="${verifyLink}"
+                    style="color: #ffffff; word-break: break-all"
+                    >${verifyLink}</a
+                  >
+                </td>
+              </tr>
+            </table>
+          </td>
+        </tr>
+
+        <tr>
+          <td
+            style="
+              padding-top: 12px;
+              text-align: center;
+              color: #9b9b9b;
+              font-size: 12px;
+            "
+          >
+            © ${new Date().getFullYear()} Pathfinder. All rights reserved.
+          </td>
+        </tr>
+      </table>
+    </td>
+  </tr>
+</table>
+    `
   }
 }
