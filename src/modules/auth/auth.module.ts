@@ -12,6 +12,7 @@ import { AuthController } from './auth.controller'
 import { AuthService } from './auth.service'
 import { EmailVerificationToken } from './entities/email-verification-token.entity'
 import { RolesGuard } from './guards/roles.guard'
+import { WsJwtGuard } from './guards/ws-jwt.guard'
 import { JwtStrategy } from './strategies/jwt.strategy'
 
 @Module({
@@ -39,7 +40,14 @@ import { JwtStrategy } from './strategies/jwt.strategy'
     })
   ],
   controllers: [AuthController],
-  providers: [AuthService, JwtStrategy, RolesGuard],
-  exports: [AuthService, JwtStrategy, PassportModule, RolesGuard]
+  providers: [AuthService, JwtStrategy, RolesGuard, WsJwtGuard],
+  exports: [
+    AuthService,
+    JwtStrategy,
+    PassportModule,
+    RolesGuard,
+    WsJwtGuard,
+    JwtModule
+  ]
 })
 export class AuthModule {}

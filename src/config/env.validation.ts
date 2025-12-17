@@ -49,6 +49,12 @@ export const envValidationSchema = Joi.object({
   // IP Tracking & Privacy
   IP_HASH_SALT: Joi.string().min(16).required(),
 
+  // Redis Configuration
+  REDIS_HOST: Joi.string().default('localhost'),
+  REDIS_PORT: Joi.number().default(6379),
+  REDIS_PASSWORD: Joi.string().allow('').default(''),
+  REDIS_DB: Joi.number().default(0),
+
   // Content Validation
   CONTENT_VALIDATION_ENABLED: Joi.boolean().default(true),
   MIN_CONTENT_QUALITY_SCORE: Joi.number().min(0).max(100).default(60),

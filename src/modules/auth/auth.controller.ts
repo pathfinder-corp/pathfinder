@@ -26,11 +26,11 @@ import { User } from '../users/entities/user.entity'
 import { AuthService } from './auth.service'
 import { CurrentUser } from './decorators/current-user.decorator'
 import { AuthResponseDto } from './dto/auth-response.dto'
+import { ChangePasswordDto } from './dto/change-password.dto'
 import { LoginDto } from './dto/login.dto'
 import { RegisterDto } from './dto/register.dto'
-import { VerifyEmailDto } from './dto/verify-email.dto'
-import { ChangePasswordDto } from './dto/change-password.dto'
 import { UpdateProfileDto } from './dto/update-profile.dto'
+import { VerifyEmailDto } from './dto/verify-email.dto'
 import { JwtAuthGuard } from './guards/jwt-auth.guard'
 
 @ApiTags('Authentication')
@@ -178,7 +178,9 @@ export class AuthController {
   @Patch('profile')
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
-  @ApiOperation({ summary: 'Update current user profile (first name, last name)' })
+  @ApiOperation({
+    summary: 'Update current user profile (first name, last name)'
+  })
   @ApiResponse({
     status: 200,
     description: 'Profile updated successfully',

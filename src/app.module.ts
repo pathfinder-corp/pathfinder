@@ -14,6 +14,7 @@ import { envValidationSchema } from './config/env.validation'
 import { AdminModule } from './modules/admin/admin.module'
 import { AssessmentsModule } from './modules/assessments/assessments.module'
 import { AuthModule } from './modules/auth/auth.module'
+import { ChatModule } from './modules/chat/chat.module'
 import { MailModule } from './modules/mail/mail.module'
 import { MentorApplicationsModule } from './modules/mentor-applications/mentor-applications.module'
 import { MentorProfilesModule } from './modules/mentor-profiles/mentor-profiles.module'
@@ -67,7 +68,8 @@ import { UsersModule } from './modules/users/users.module'
     RecommendationsModule,
     MentorshipRequestsModule,
     MentorshipsModule,
-    SchedulerModule
+    SchedulerModule,
+    ChatModule
   ],
   controllers: [AppController],
   providers: [

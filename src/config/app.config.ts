@@ -77,6 +77,12 @@ export default () => {
       ttl: parseIntSafe(process.env.THROTTLE_TTL, 60),
       limit: parseIntSafe(process.env.THROTTLE_LIMIT, 100)
     },
+    redis: {
+      host: process.env.REDIS_HOST || 'localhost',
+      port: parseIntSafe(process.env.REDIS_PORT, 6379),
+      password: process.env.REDIS_PASSWORD || undefined,
+      db: parseIntSafe(process.env.REDIS_DB, 0)
+    },
     genai: {
       apiKey: process.env.GENAI_API_KEY ?? '',
       model: process.env.GENAI_MODEL ?? 'gemini-2.5-flash',

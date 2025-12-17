@@ -1,0 +1,173 @@
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger'
+import { Expose, Type } from 'class-transformer'
+import {
+  IsNotEmpty,
+  IsOptional,
+  IsString,
+  IsUUID,
+  MaxLength
+} from 'class-validator'
+
+import { MessageType } from '../entities/message.entity'
+
+export class MessageUserDto {
+  @ApiProperty()
+  @Expose()
+  id: string
+
+  @ApiProperty()
+  @Expose()
+  firstName: string
+
+  @ApiProperty()
+  @Expose()
+  lastName: string
+
+  @ApiPropertyOptional()
+  @Expose()
+  avatar?: string
+}
+
+export class MessageResponseDto {
+  @ApiProperty()
+  @Expose()
+  id: string
+
+  @ApiProperty()
+  @Expose()
+  conversationId: string
+
+  @ApiProperty()
+  @Expose()
+  senderId: string
+
+  @ApiPropertyOptional({ type: MessageUserDto })
+  @Expose()
+  @Type(() => MessageUserDto)
+  sender?: MessageUserDto
+
+  @ApiProperty({ enum: MessageType })
+  @Expose()
+  type: MessageType
+
+  @ApiProperty()
+  @Expose()
+  content: string
+
+  @ApiPropertyOptional()
+  @Expose()
+  parentMessageId?: string
+
+  @ApiPropertyOptional({ type: MessageResponseDto })
+  @Expose()
+  @Type(() => MessageResponseDto)
+  parentMessage?: MessageResponseDto
+
+  @ApiProperty()
+  @Expose()
+  isEdited: boolean
+
+  @ApiPropertyOptional()
+  @Expose()
+  @Type(() => Date)
+  editedAt?: Date
+
+  @ApiProperty()
+  @Expose()
+  isDeleted: boolean
+
+  @ApiPropertyOptional()
+  @Expose()
+  @Type(() => Date)
+  deletedAt?: Date
+
+  @ApiPropertyOptional()
+  @Expose()
+  @Type(() => Date)
+  readAt?: Date
+
+  @ApiProperty()
+  @Expose()
+  @Type(() => Date)
+  createdAt: Date
+
+  @ApiProperty()
+  @Expose()
+  @Type(() => Date)
+  updatedAt: Date
+}
+
+export class SendMessageDto {
+  @ApiProperty({ maxLength: 10000 })
+  @IsString()
+  @IsNotEmpty()
+  @MaxLength(10000)
+  content: string
+
+  @ApiPropertyOptional({ description: 'ID of message being replied to' })
+  @IsOptional()
+  @IsUUID()
+  parentMessageId?: string
+}
+
+export class EditMessageDto {
+  @ApiProperty({ maxLength: 10000 })
+  @IsString()
+  @IsNotEmpty()
+  @MaxLength(10000)
+  content: string
+}
+
+export class GetMessagesQueryDto {
+  @ApiPropertyOptional({ default: 50, minimum: 1, maximum: 100 })
+  @IsOptional()
+  @Type(() => Number)
+  limit?: number = 50
+
+  @ApiPropertyOptional({
+    description: 'Cursor (message ID) to load messages before this point'
+  })
+  @IsOptional()
+  @IsUUID()
+  before?: string
+}
+
+export class MessageListResponseDto {
+  @ApiProperty({ type: [MessageResponseDto] })
+  @Type(() => MessageResponseDto)
+  messages: MessageResponseDto[]
+
+  @ApiProperty()
+  hasMore: boolean
+
+  @ApiPropertyOptional()
+  nextCursor?: string
+}
+
+export class ConversationResponseDto {
+  @ApiProperty()
+  @Expose()
+  id: string
+
+  @ApiProperty()
+  @Expose()
+  mentorshipId: string
+
+  @ApiProperty()
+  @Expose()
+  participant1Id: string
+
+  @ApiProperty()
+  @Expose()
+  participant2Id: string
+
+  @ApiPropertyOptional()
+  @Expose()
+  @Type(() => Date)
+  lastMessageAt?: Date
+
+  @ApiProperty()
+  @Expose()
+  @Type(() => Date)
+  createdAt: Date
+}
