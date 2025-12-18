@@ -320,7 +320,7 @@ export class AuthService {
     await this.userRepository.update(verificationToken.userId, {
       emailVerified: true,
       emailVerifiedAt: new Date(),
-      emailVerificationToken: undefined
+      emailVerificationToken: null
     })
 
     this.logger.log(`Email verified for user ${verificationToken.userId}`)

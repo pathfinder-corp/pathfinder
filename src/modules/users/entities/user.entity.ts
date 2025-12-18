@@ -75,8 +75,8 @@ export class User {
   @Column({ default: false, name: 'email_verified' })
   emailVerified: boolean
 
-  @Column({ nullable: true, name: 'email_verification_token' })
-  emailVerificationToken?: string
+  @Column({ type: 'text', nullable: true, name: 'email_verification_token' })
+  emailVerificationToken!: string | null
 
   @Column({
     type: 'timestamptz',
