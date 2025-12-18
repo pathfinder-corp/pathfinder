@@ -157,9 +157,19 @@ export class ConversationResponseDto {
   @Expose()
   participant1Id: string
 
+  @ApiPropertyOptional({ type: MessageUserDto })
+  @Expose()
+  @Type(() => MessageUserDto)
+  participant1?: MessageUserDto
+
   @ApiProperty()
   @Expose()
   participant2Id: string
+
+  @ApiPropertyOptional({ type: MessageUserDto })
+  @Expose()
+  @Type(() => MessageUserDto)
+  participant2?: MessageUserDto
 
   @ApiPropertyOptional()
   @Expose()
