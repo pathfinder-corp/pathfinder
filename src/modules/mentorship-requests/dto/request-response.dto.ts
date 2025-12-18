@@ -39,6 +39,10 @@ export class MentorshipRequestResponseDto {
   @Expose()
   mentorId: string
 
+  @ApiPropertyOptional({ description: 'Mentor profile ID' })
+  @Expose()
+  mentorProfileId?: string
+
   @ApiPropertyOptional({ type: RequestUserDto })
   @Expose()
   @Type(() => RequestUserDto)

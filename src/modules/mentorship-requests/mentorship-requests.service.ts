@@ -134,6 +134,9 @@ export class MentorshipRequestsService {
       throw new NotFoundException('Request not found')
     }
 
+    // Populate mentor profile ID
+    await this.populateMentorProfileId(request)
+
     return request
   }
 
@@ -171,6 +174,9 @@ export class MentorshipRequestsService {
       .skip(query.skip)
       .take(query.take)
       .getManyAndCount()
+
+    // Populate mentor profile IDs for all requests
+    await this.populateMentorProfileIds(requests)
 
     return { requests, total }
   }
@@ -362,5 +368,50 @@ export class MentorshipRequestsService {
     }
 
     return request
+  }
+
+  /**
+   * Populates mentorProfileId for a single request
+   */
+  private async populateMentorProfileId(
+    request: MentorshipRequest
+  ): Promise<void> {
+    try {
+      const mentorProfile = await this.mentorProfilesService.findByUserId(
+        request.mentorId
+      )
+      if (mentorProfile) {
+        ;(request as any).mentorProfileId = mentorProfile.id
+      }
+    } catch {
+      // Mentor profile may not exist, leave mentorProfileId undefined
+    }
+  }
+
+  /**
+   * Populates mentorProfileId for multiple requests efficiently
+   */
+  private async populateMentorProfileIds(
+    requests: MentorshipRequest[]
+  ): Promise<void> {
+    if (requests.length === 0) return
+
+    const mentorIds = [...new Set(requests.map((r) => r.mentorId))]
+    const profileMap = new Map<string, string>()
+
+    for (const mentorId of mentorIds) {
+      try {
+        const profile = await this.mentorProfilesService.findByUserId(mentorId)
+        if (profile) {
+          profileMap.set(mentorId, profile.id)
+        }
+      } catch {
+        // Profile may not exist, skip
+      }
+    }
+
+    requests.forEach((request) => {
+      ;(request as any).mentorProfileId = profileMap.get(request.mentorId)
+    })
   }
 }
