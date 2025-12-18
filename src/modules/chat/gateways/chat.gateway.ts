@@ -147,15 +147,30 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
   ) {
     const { conversationId, message } = data
 
-    const savedMessage = await this.chatService.sendMessage(
-      conversationId,
-      client.userId!,
-      message
-    )
+    const { message: savedMessage, mentorship } =
+      await this.chatService.sendMessage(
+        conversationId,
+        client.userId!,
+        message
+      )
 
     const messageDto = plainToInstance(MessageResponseDto, savedMessage, {
       excludeExtraneousValues: true
     })
+
+    // Add role to sender
+    if (messageDto.sender && mentorship) {
+      messageDto.sender.role =
+        mentorship.mentorId === messageDto.sender.id ? 'mentor' : 'student'
+    }
+
+    // Add role to parent message sender if exists
+    if (messageDto.parentMessage?.sender && mentorship) {
+      messageDto.parentMessage.sender.role =
+        mentorship.mentorId === messageDto.parentMessage.sender.id
+          ? 'mentor'
+          : 'student'
+    }
 
     // Emit to conversation room
     this.server
@@ -198,15 +213,26 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
   ) {
     const { conversationId, messageId, content } = data
 
-    const editedMessage = await this.chatService.editMessage(
-      messageId,
-      client.userId!,
-      { content }
-    )
+    const { message: editedMessage, mentorship } =
+      await this.chatService.editMessage(messageId, client.userId!, { content })
 
     const messageDto = plainToInstance(MessageResponseDto, editedMessage, {
       excludeExtraneousValues: true
     })
+
+    // Add role to sender
+    if (messageDto.sender && mentorship) {
+      messageDto.sender.role =
+        mentorship.mentorId === messageDto.sender.id ? 'mentor' : 'student'
+    }
+
+    // Add role to parent message sender if exists
+    if (messageDto.parentMessage?.sender && mentorship) {
+      messageDto.parentMessage.sender.role =
+        mentorship.mentorId === messageDto.parentMessage.sender.id
+          ? 'mentor'
+          : 'student'
+    }
 
     this.server
       .to(`conversation:${conversationId}`)
@@ -223,14 +249,26 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
   ) {
     const { conversationId, messageId } = data
 
-    const deletedMessage = await this.chatService.deleteMessage(
-      messageId,
-      client.userId!
-    )
+    const { message: deletedMessage, mentorship } =
+      await this.chatService.deleteMessage(messageId, client.userId!)
 
     const messageDto = plainToInstance(MessageResponseDto, deletedMessage, {
       excludeExtraneousValues: true
     })
+
+    // Add role to sender
+    if (messageDto.sender && mentorship) {
+      messageDto.sender.role =
+        mentorship.mentorId === messageDto.sender.id ? 'mentor' : 'student'
+    }
+
+    // Add role to parent message sender if exists
+    if (messageDto.parentMessage?.sender && mentorship) {
+      messageDto.parentMessage.sender.role =
+        mentorship.mentorId === messageDto.parentMessage.sender.id
+          ? 'mentor'
+          : 'student'
+    }
 
     this.server
       .to(`conversation:${conversationId}`)

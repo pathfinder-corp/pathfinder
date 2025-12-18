@@ -8,7 +8,7 @@ import {
 import { InjectRepository } from '@nestjs/typeorm'
 import { Repository } from 'typeorm'
 
-import { MentorshipStatus } from '../../mentorships/entities/mentorship.entity'
+import { Mentorship, MentorshipStatus } from '../../mentorships/entities/mentorship.entity'
 import { MentorshipsService } from '../../mentorships/mentorships.service'
 import {
   EditMessageDto,
@@ -94,7 +94,7 @@ export class ChatService {
     conversationId: string,
     senderId: string,
     dto: SendMessageDto
-  ): Promise<Message> {
+  ): Promise<{ message: Message; mentorship: Mentorship }> {
     const conversation = await this.getConversationById(conversationId)
 
     // Verify sender is participant
@@ -147,14 +147,27 @@ export class ChatService {
       `Message ${message.id} sent in conversation ${conversationId}`
     )
 
-    return savedMessage!
+    return {
+      message: savedMessage!,
+      mentorship: conversation.mentorship!
+    }
   }
 
   async getMessages(
     conversationId: string,
     query: GetMessagesQueryDto
-  ): Promise<{ messages: Message[]; hasMore: boolean; nextCursor?: string }> {
+  ): Promise<{ messages: Message[]; hasMore: boolean; nextCursor?: string; mentorship: Mentorship }> {
     const { limit = 50, before } = query
+
+    // First get the conversation to access mentorship
+    const conversation = await this.conversationRepository.findOne({
+      where: { id: conversationId },
+      relations: ['mentorship']
+    })
+
+    if (!conversation) {
+      throw new NotFoundException('Conversation not found')
+    }
 
     const qb = this.messageRepository
       .createQueryBuilder('message')
@@ -189,7 +202,8 @@ export class ChatService {
     return {
       messages: messages.reverse(),
       hasMore,
-      nextCursor
+      nextCursor,
+      mentorship: conversation.mentorship!
     }
   }
 
@@ -197,10 +211,10 @@ export class ChatService {
     messageId: string,
     userId: string,
     dto: EditMessageDto
-  ): Promise<Message> {
+  ): Promise<{ message: Message; mentorship: Mentorship }> {
     const message = await this.messageRepository.findOne({
       where: { id: messageId },
-      relations: ['sender', 'parentMessage', 'parentMessage.sender']
+      relations: ['sender', 'parentMessage', 'parentMessage.sender', 'conversation', 'conversation.mentorship']
     })
 
     if (!message) {
@@ -223,13 +237,16 @@ export class ChatService {
 
     this.logger.log(`Message ${messageId} edited by user ${userId}`)
 
-    return message
+    return {
+      message,
+      mentorship: message.conversation!.mentorship!
+    }
   }
 
-  async deleteMessage(messageId: string, userId: string): Promise<Message> {
+  async deleteMessage(messageId: string, userId: string): Promise<{ message: Message; mentorship: Mentorship }> {
     const message = await this.messageRepository.findOne({
       where: { id: messageId },
-      relations: ['sender', 'parentMessage', 'parentMessage.sender']
+      relations: ['sender', 'parentMessage', 'parentMessage.sender', 'conversation', 'conversation.mentorship']
     })
 
     if (!message) {
@@ -252,7 +269,10 @@ export class ChatService {
 
     this.logger.log(`Message ${messageId} deleted by user ${userId}`)
 
-    return message
+    return {
+      message,
+      mentorship: message.conversation!.mentorship!
+    }
   }
 
   async markAsRead(

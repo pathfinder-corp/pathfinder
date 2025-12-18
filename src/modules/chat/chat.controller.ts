@@ -50,11 +50,27 @@ export class ChatController {
   ): Promise<ConversationResponseDto[]> {
     const conversations = await this.chatService.getUserConversations(user.id)
 
-    return conversations.map((conv) =>
-      plainToInstance(ConversationResponseDto, conv, {
+    return conversations.map((conv) => {
+      const dto = plainToInstance(ConversationResponseDto, conv, {
         excludeExtraneousValues: true
       })
-    )
+
+      // Add role information to participants
+      if (dto.participant1 && conv.mentorship) {
+        dto.participant1.role =
+          conv.mentorship.mentorId === dto.participant1.id
+            ? 'mentor'
+            : 'student'
+      }
+      if (dto.participant2 && conv.mentorship) {
+        dto.participant2.role =
+          conv.mentorship.mentorId === dto.participant2.id
+            ? 'mentor'
+            : 'student'
+      }
+
+      return dto
+    })
   }
 
   @Get('conversations/mentorship/:mentorshipId')
@@ -66,9 +82,25 @@ export class ChatController {
     const conversation =
       await this.chatService.getOrCreateConversation(mentorshipId)
 
-    return plainToInstance(ConversationResponseDto, conversation, {
+    const dto = plainToInstance(ConversationResponseDto, conversation, {
       excludeExtraneousValues: true
     })
+
+    // Add role information to participants
+    if (dto.participant1 && conversation.mentorship) {
+      dto.participant1.role =
+        conversation.mentorship.mentorId === dto.participant1.id
+          ? 'mentor'
+          : 'student'
+    }
+    if (dto.participant2 && conversation.mentorship) {
+      dto.participant2.role =
+        conversation.mentorship.mentorId === dto.participant2.id
+          ? 'mentor'
+          : 'student'
+    }
+
+    return dto
   }
 
   @Get('conversations/:conversationId/messages')
@@ -88,15 +120,31 @@ export class ChatController {
       throw new Error('Not a participant')
     }
 
-    const { messages, hasMore, nextCursor } =
+    const { messages, hasMore, nextCursor, mentorship } =
       await this.chatService.getMessages(conversationId, query)
 
     return {
-      messages: messages.map((msg) =>
-        plainToInstance(MessageResponseDto, msg, {
+      messages: messages.map((msg) => {
+        const dto = plainToInstance(MessageResponseDto, msg, {
           excludeExtraneousValues: true
         })
-      ),
+
+        // Add role to sender
+        if (dto.sender && mentorship) {
+          dto.sender.role =
+            mentorship.mentorId === dto.sender.id ? 'mentor' : 'student'
+        }
+
+        // Add role to parent message sender if exists
+        if (dto.parentMessage?.sender && mentorship) {
+          dto.parentMessage.sender.role =
+            mentorship.mentorId === dto.parentMessage.sender.id
+              ? 'mentor'
+              : 'student'
+        }
+
+        return dto
+      }),
       hasMore,
       nextCursor
     }
@@ -110,15 +158,31 @@ export class ChatController {
     @Param('conversationId', ParseUUIDPipe) conversationId: string,
     @Body() dto: SendMessageDto
   ): Promise<MessageResponseDto> {
-    const message = await this.chatService.sendMessage(
+    const { message, mentorship } = await this.chatService.sendMessage(
       conversationId,
       user.id,
       dto
     )
 
-    return plainToInstance(MessageResponseDto, message, {
+    const responseDto = plainToInstance(MessageResponseDto, message, {
       excludeExtraneousValues: true
     })
+
+    // Add role to sender
+    if (responseDto.sender && mentorship) {
+      responseDto.sender.role =
+        mentorship.mentorId === responseDto.sender.id ? 'mentor' : 'student'
+    }
+
+    // Add role to parent message sender if exists
+    if (responseDto.parentMessage?.sender && mentorship) {
+      responseDto.parentMessage.sender.role =
+        mentorship.mentorId === responseDto.parentMessage.sender.id
+          ? 'mentor'
+          : 'student'
+    }
+
+    return responseDto
   }
 
   @Put('messages/:messageId')
@@ -129,11 +193,31 @@ export class ChatController {
     @Param('messageId', ParseUUIDPipe) messageId: string,
     @Body() dto: EditMessageDto
   ): Promise<MessageResponseDto> {
-    const message = await this.chatService.editMessage(messageId, user.id, dto)
+    const { message, mentorship } = await this.chatService.editMessage(
+      messageId,
+      user.id,
+      dto
+    )
 
-    return plainToInstance(MessageResponseDto, message, {
+    const responseDto = plainToInstance(MessageResponseDto, message, {
       excludeExtraneousValues: true
     })
+
+    // Add role to sender
+    if (responseDto.sender && mentorship) {
+      responseDto.sender.role =
+        mentorship.mentorId === responseDto.sender.id ? 'mentor' : 'student'
+    }
+
+    // Add role to parent message sender if exists
+    if (responseDto.parentMessage?.sender && mentorship) {
+      responseDto.parentMessage.sender.role =
+        mentorship.mentorId === responseDto.parentMessage.sender.id
+          ? 'mentor'
+          : 'student'
+    }
+
+    return responseDto
   }
 
   @Delete('messages/:messageId')
@@ -143,11 +227,30 @@ export class ChatController {
     @CurrentUser() user: User,
     @Param('messageId', ParseUUIDPipe) messageId: string
   ): Promise<MessageResponseDto> {
-    const message = await this.chatService.deleteMessage(messageId, user.id)
+    const { message, mentorship } = await this.chatService.deleteMessage(
+      messageId,
+      user.id
+    )
 
-    return plainToInstance(MessageResponseDto, message, {
+    const responseDto = plainToInstance(MessageResponseDto, message, {
       excludeExtraneousValues: true
     })
+
+    // Add role to sender
+    if (responseDto.sender && mentorship) {
+      responseDto.sender.role =
+        mentorship.mentorId === responseDto.sender.id ? 'mentor' : 'student'
+    }
+
+    // Add role to parent message sender if exists
+    if (responseDto.parentMessage?.sender && mentorship) {
+      responseDto.parentMessage.sender.role =
+        mentorship.mentorId === responseDto.parentMessage.sender.id
+          ? 'mentor'
+          : 'student'
+    }
+
+    return responseDto
   }
 
   @Get('conversations/:conversationId/unread-count')

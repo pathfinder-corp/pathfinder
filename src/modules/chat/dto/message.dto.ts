@@ -26,6 +26,10 @@ export class MessageUserDto {
   @ApiPropertyOptional()
   @Expose()
   avatar?: string
+
+  @ApiPropertyOptional({ enum: ['mentor', 'student'] })
+  @Expose()
+  role?: 'mentor' | 'student'
 }
 
 export class MessageResponseDto {
