@@ -154,7 +154,28 @@ export default () => {
       ),
       allowedMimeTypes: (
         process.env.UPLOAD_ALLOWED_MIME_TYPES ||
-        'image/jpeg,image/png,image/gif,image/webp,application/pdf'
+        [
+          // Images
+          'image/jpeg',
+          'image/png',
+          'image/gif',
+          'image/webp',
+          // PDF
+          'application/pdf',
+          // Microsoft Word
+          'application/msword',
+          'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+          // Microsoft Excel
+          'application/vnd.ms-excel',
+          'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+          // Microsoft PowerPoint
+          'application/vnd.ms-powerpoint',
+          'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+          // OpenDocument formats
+          'application/vnd.oasis.opendocument.text',
+          'application/vnd.oasis.opendocument.spreadsheet',
+          'application/vnd.oasis.opendocument.presentation'
+        ].join(',')
       )
         .split(',')
         .map((t) => t.trim())

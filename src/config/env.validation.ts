@@ -84,6 +84,21 @@ export const envValidationSchema = Joi.object({
     .default(5 * 1024 * 1024), // 5MB default
   UPLOAD_MAX_DOCUMENTS_PER_APPLICATION: Joi.number().min(1).max(50).default(10),
   UPLOAD_ALLOWED_MIME_TYPES: Joi.string().default(
-    'image/jpeg,image/png,image/gif,image/webp,application/pdf'
+    [
+      'image/jpeg',
+      'image/png',
+      'image/gif',
+      'image/webp',
+      'application/pdf',
+      'application/msword',
+      'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+      'application/vnd.ms-excel',
+      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      'application/vnd.ms-powerpoint',
+      'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+      'application/vnd.oasis.opendocument.text',
+      'application/vnd.oasis.opendocument.spreadsheet',
+      'application/vnd.oasis.opendocument.presentation'
+    ].join(',')
   )
 })
