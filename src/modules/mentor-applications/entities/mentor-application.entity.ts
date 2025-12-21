@@ -11,16 +11,9 @@ import {
 } from 'typeorm'
 
 import { User } from '../../users/entities/user.entity'
+import { ApplicationDocument } from './application-document.entity'
 import { ApplicationStatusHistory } from './application-status-history.entity'
-
-export enum ApplicationStatus {
-  PENDING = 'pending',
-  FLAGGED = 'flagged',
-  UNDER_REVIEW = 'under_review',
-  APPROVED = 'approved',
-  DECLINED = 'declined',
-  WITHDRAWN = 'withdrawn'
-}
+import { ApplicationStatus } from './application-status.enum'
 
 @Entity('mentor_applications')
 @Index(['userId'])
@@ -94,6 +87,11 @@ export class MentorApplication {
     cascade: true
   })
   statusHistory?: ApplicationStatusHistory[]
+
+  @OneToMany(() => ApplicationDocument, (doc) => doc.application, {
+    cascade: true
+  })
+  documents?: ApplicationDocument[]
 
   @CreateDateColumn({ name: 'created_at', type: 'timestamptz' })
   createdAt: Date

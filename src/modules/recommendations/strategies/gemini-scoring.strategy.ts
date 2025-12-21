@@ -77,10 +77,6 @@ export class GeminiScoringStrategy implements ScoringStrategy {
 
     // TODO: Implement actual Gemini integration
     // For now, use rule-based with a note that Gemini will be added
-    this.logger.debug(
-      `Gemini scoring requested for mentor ${mentor.id} - using fallback`
-    )
-
     const result = await this.fallbackStrategy.score(preferences, mentor)
 
     // Add note that this would be AI-enhanced

@@ -1,11 +1,15 @@
+import type { Response } from 'express'
+
 import {
   Body,
   Controller,
   Get,
+  NotFoundException,
   Param,
   ParseUUIDPipe,
   Post,
   Query,
+  Res,
   UseGuards
 } from '@nestjs/common'
 import {
@@ -25,8 +29,18 @@ import { Roles } from '../../auth/decorators/roles.decorator'
 import { JwtAuthGuard } from '../../auth/guards/jwt-auth.guard'
 import { RolesGuard } from '../../auth/guards/roles.guard'
 import { AdminApplicationResponseDto } from '../../mentor-applications/dto/application-response.dto'
+import {
+  AdminDocumentResponseDto,
+  DocumentResponseDto
+} from '../../mentor-applications/dto/document-response.dto'
 import { ReviewApplicationDto } from '../../mentor-applications/dto/review-application.dto'
+import { VerifyDocumentDto } from '../../mentor-applications/dto/upload-document.dto'
 import { MentorApplicationsService } from '../../mentor-applications/mentor-applications.service'
+import { DocumentUploadService } from '../../mentor-applications/services/document-upload.service'
+import {
+  MentorListResponseDto,
+  MentorProfileResponseDto
+} from '../../mentor-profiles/dto/mentor-profile-response.dto'
 import { MentorProfilesService } from '../../mentor-profiles/mentor-profiles.service'
 import { MentorshipResponseDto } from '../../mentorships/dto/mentorship-response.dto'
 import { MentorshipsService } from '../../mentorships/mentorships.service'
@@ -38,6 +52,9 @@ import {
   AdminForceEndMentorshipDto,
   AdminListApplicationsQueryDto,
   AdminListAuditLogsQueryDto,
+  AdminListDocumentsQueryDto,
+  AdminListMentorshipsQueryDto,
+  AdminListMentorsQueryDto,
   AdminRevokeMentorDto
 } from '../dto/admin-mentorship.dto'
 
@@ -54,6 +71,7 @@ export class AdminMentorshipController {
     private readonly usersService: UsersService,
     private readonly auditLogService: AuditLogService,
     private readonly notificationsService: NotificationsService,
+    private readonly documentUploadService: DocumentUploadService,
     @InjectRepository(AuditLog)
     private readonly auditLogRepository: Repository<AuditLog>
   ) {}
@@ -141,6 +159,66 @@ export class AdminMentorshipController {
   // Mentor Management
   // ===============================
 
+  @Get('mentors')
+  @ApiOperation({ summary: 'List all mentor profiles' })
+  @ApiResponse({ status: 200, type: MentorListResponseDto })
+  async listMentors(
+    @Query() query: AdminListMentorsQueryDto
+  ): Promise<MentorListResponseDto> {
+    const { mentors, total } = await this.mentorProfilesService.findAllForAdmin(
+      {
+        isActive: query.isActive,
+        isAcceptingMentees: query.isAcceptingMentees,
+        search: query.search,
+        skip: query.skip,
+        take: query.take
+      }
+    )
+
+    const page = query.page ?? 1
+    const limit = query.limit ?? 20
+
+    return {
+      mentors: mentors.map((m) =>
+        plainToInstance(MentorProfileResponseDto, m, {
+          excludeExtraneousValues: true
+        })
+      ),
+      meta: {
+        total,
+        page,
+        limit,
+        totalPages: Math.ceil(total / limit)
+      }
+    }
+  }
+
+  @Get('mentors/stats')
+  @ApiOperation({ summary: 'Get mentor statistics' })
+  @ApiResponse({ status: 200 })
+  async getMentorStats(): Promise<{
+    total: number
+    active: number
+    inactive: number
+    acceptingMentees: number
+  }> {
+    return this.mentorProfilesService.getMentorStats()
+  }
+
+  @Get('mentors/:id')
+  @ApiOperation({ summary: 'Get mentor profile details' })
+  @ApiResponse({ status: 200, type: MentorProfileResponseDto })
+  @ApiResponse({ status: 404, description: 'Mentor not found' })
+  async getMentorProfile(
+    @Param('id', ParseUUIDPipe) id: string
+  ): Promise<MentorProfileResponseDto> {
+    const profile = await this.mentorProfilesService.findById(id)
+
+    return plainToInstance(MentorProfileResponseDto, profile, {
+      excludeExtraneousValues: true
+    })
+  }
+
   @Post('users/:id/revoke-mentor')
   @ApiOperation({ summary: 'Revoke mentor status from a user' })
   @ApiResponse({ status: 200 })
@@ -189,6 +267,66 @@ export class AdminMentorshipController {
   // ===============================
   // Mentorship Management
   // ===============================
+
+  @Get('mentorships')
+  @ApiOperation({ summary: 'List all mentorships' })
+  @ApiResponse({ status: 200 })
+  async listMentorships(@Query() query: AdminListMentorshipsQueryDto): Promise<{
+    mentorships: MentorshipResponseDto[]
+    meta: { total: number; page: number; limit: number; totalPages: number }
+  }> {
+    const { mentorships, total } =
+      await this.mentorshipsService.findAllForAdmin({
+        mentorId: query.mentorId,
+        menteeId: query.menteeId,
+        status: query.status,
+        skip: query.skip,
+        take: query.take
+      })
+
+    const page = query.page ?? 1
+    const limit = query.limit ?? 20
+
+    return {
+      mentorships: mentorships.map((m) =>
+        plainToInstance(MentorshipResponseDto, m, {
+          excludeExtraneousValues: true
+        })
+      ),
+      meta: {
+        total,
+        page,
+        limit,
+        totalPages: Math.ceil(total / limit)
+      }
+    }
+  }
+
+  @Get('mentorships/stats')
+  @ApiOperation({ summary: 'Get mentorship statistics' })
+  @ApiResponse({ status: 200 })
+  async getMentorshipStats(): Promise<{
+    total: number
+    active: number
+    completed: number
+    cancelled: number
+  }> {
+    return this.mentorshipsService.getMentorshipStats()
+  }
+
+  @Get('mentorships/:id')
+  @ApiOperation({ summary: 'Get mentorship details' })
+  @ApiResponse({ status: 200, type: MentorshipResponseDto })
+  @ApiResponse({ status: 404, description: 'Mentorship not found' })
+  async getMentorshipDetails(
+    @Param('id', ParseUUIDPipe) id: string
+  ): Promise<MentorshipResponseDto> {
+    const mentorship = await this.mentorshipsService.findOne(id)
+
+    return plainToInstance(MentorshipResponseDto, mentorship, {
+      excludeExtraneousValues: true
+    })
+  }
 
   @Post('mentorships/:id/force-end')
   @ApiOperation({ summary: 'Force end an active mentorship' })
@@ -303,5 +441,164 @@ export class AdminMentorshipController {
     Array<{ ipHash: string; count: number }>
   > {
     return await this.applicationsService.getIpHashStatistics()
+  }
+
+  // ===============================
+  // Document Verification
+  // ===============================
+
+  @Get('documents')
+  @ApiOperation({
+    summary:
+      'Get all documents with filtering by status (pending/verified/rejected)'
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Paginated list of documents with verification history'
+  })
+  async getAllDocuments(@Query() query: AdminListDocumentsQueryDto): Promise<{
+    documents: AdminDocumentResponseDto[]
+    meta: { total: number; page: number; limit: number; totalPages: number }
+  }> {
+    const result = await this.documentUploadService.getAllDocumentsWithHistory({
+      status: query.status,
+      page: query.page,
+      limit: query.limit
+    })
+
+    return {
+      documents: result.documents.map((doc) =>
+        plainToInstance(AdminDocumentResponseDto, doc, {
+          excludeExtraneousValues: true
+        })
+      ),
+      meta: {
+        total: result.total,
+        page: result.page,
+        limit: result.limit,
+        totalPages: result.totalPages
+      }
+    }
+  }
+
+  @Get('documents/pending')
+  @ApiOperation({
+    summary: 'Get all pending documents across all applications (for review)'
+  })
+  @ApiResponse({ status: 200, type: [AdminDocumentResponseDto] })
+  async getAllPendingDocuments(): Promise<AdminDocumentResponseDto[]> {
+    const documents = await this.documentUploadService.getAllPendingDocuments()
+
+    return documents.map((doc) =>
+      plainToInstance(AdminDocumentResponseDto, doc, {
+        excludeExtraneousValues: true
+      })
+    )
+  }
+
+  @Get('mentor-applications/:applicationId/documents')
+  @ApiOperation({
+    summary: 'Get all documents for an application (admin view)'
+  })
+  @ApiResponse({ status: 200, type: [DocumentResponseDto] })
+  async getApplicationDocuments(
+    @Param('applicationId', ParseUUIDPipe) applicationId: string
+  ): Promise<DocumentResponseDto[]> {
+    const documents =
+      await this.documentUploadService.getDocuments(applicationId)
+
+    return documents.map((doc) =>
+      plainToInstance(DocumentResponseDto, doc, {
+        excludeExtraneousValues: true
+      })
+    )
+  }
+
+  @Get('mentor-applications/:applicationId/documents/:documentId')
+  @ApiOperation({ summary: 'Get document details (admin view)' })
+  @ApiResponse({ status: 200, type: AdminDocumentResponseDto })
+  async getDocumentDetails(
+    @Param('applicationId', ParseUUIDPipe) applicationId: string,
+    @Param('documentId', ParseUUIDPipe) documentId: string
+  ): Promise<AdminDocumentResponseDto> {
+    const document = await this.documentUploadService.getDocument(documentId)
+
+    return plainToInstance(AdminDocumentResponseDto, document, {
+      excludeExtraneousValues: true
+    })
+  }
+
+  @Get('mentor-applications/:applicationId/documents/:documentId/download')
+  @ApiOperation({
+    summary: 'Download/view a document (redirects to ImageKit URL)'
+  })
+  @ApiResponse({ status: 302, description: 'Redirect to ImageKit URL' })
+  @ApiResponse({ status: 404, description: 'Document not found' })
+  async downloadDocument(
+    @Param('applicationId', ParseUUIDPipe) applicationId: string,
+    @Param('documentId', ParseUUIDPipe) documentId: string,
+    @Res() res: Response
+  ): Promise<void> {
+    const document = await this.documentUploadService.getDocument(documentId)
+
+    // Verify document belongs to the application
+    if (document.applicationId !== applicationId) {
+      throw new NotFoundException('Document not found in this application')
+    }
+
+    // Redirect to ImageKit URL
+    if (document.imagekitUrl) {
+      res.redirect(document.imagekitUrl)
+      return
+    }
+
+    // Fallback: try to get public URL from service
+    const publicUrl =
+      await this.documentUploadService.getDocumentPublicUrl(documentId)
+    if (publicUrl) {
+      res.redirect(publicUrl)
+      return
+    }
+
+    throw new NotFoundException(
+      'Document file not available. Please re-upload the document.'
+    )
+  }
+
+  @Post('mentor-applications/:applicationId/documents/:documentId/verify')
+  @ApiOperation({ summary: 'Verify or reject a document' })
+  @ApiResponse({ status: 200, type: DocumentResponseDto })
+  @ApiResponse({ status: 400, description: 'Validation error' })
+  @ApiResponse({ status: 404, description: 'Document not found' })
+  async verifyDocument(
+    @CurrentUser() admin: User,
+    @Param('applicationId', ParseUUIDPipe) applicationId: string,
+    @Param('documentId', ParseUUIDPipe) documentId: string,
+    @Body() dto: VerifyDocumentDto
+  ): Promise<DocumentResponseDto> {
+    const document = await this.documentUploadService.verifyDocument(
+      documentId,
+      admin.id,
+      dto
+    )
+
+    return plainToInstance(DocumentResponseDto, document, {
+      excludeExtraneousValues: true
+    })
+  }
+
+  @Get('mentor-applications/:applicationId/documents-stats')
+  @ApiOperation({ summary: 'Get document statistics for an application' })
+  @ApiResponse({ status: 200 })
+  async getDocumentStats(
+    @Param('applicationId', ParseUUIDPipe) applicationId: string
+  ): Promise<{
+    total: number
+    verified: number
+    pending: number
+    rejected: number
+    byType: Record<string, number>
+  }> {
+    return await this.documentUploadService.getDocumentStats(applicationId)
   }
 }

@@ -2,7 +2,7 @@ import { ApiPropertyOptional } from '@nestjs/swagger'
 import { Transform } from 'class-transformer'
 import { IsEnum, IsInt, IsOptional, IsString, Max, Min } from 'class-validator'
 
-import { ApplicationStatus } from '../entities/mentor-application.entity'
+import { ApplicationStatus } from '../entities/application-status.enum'
 
 export enum SortOrder {
   ASC = 'ASC',

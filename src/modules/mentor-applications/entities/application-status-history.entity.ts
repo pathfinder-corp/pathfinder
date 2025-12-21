@@ -9,10 +9,8 @@ import {
 } from 'typeorm'
 
 import { User } from '../../users/entities/user.entity'
-import {
-  ApplicationStatus,
-  MentorApplication
-} from './mentor-application.entity'
+import { ApplicationStatus } from './application-status.enum'
+import { MentorApplication } from './mentor-application.entity'
 
 @Entity('application_status_history')
 @Index(['applicationId'])

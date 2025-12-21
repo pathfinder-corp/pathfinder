@@ -75,5 +75,15 @@ export const envValidationSchema = Joi.object({
   MAX_MESSAGE_LENGTH: Joi.number().min(100).max(50000).default(10000),
   DEFAULT_MEETING_DURATION_MINUTES: Joi.number().min(15).max(480).default(60),
   MEETING_REMINDER_HOURS: Joi.number().min(1).max(168).default(24),
-  IP_BASED_RATE_LIMIT_PER_WEEK: Joi.number().min(1).max(100).default(10)
+  IP_BASED_RATE_LIMIT_PER_WEEK: Joi.number().min(1).max(100).default(10),
+
+  UPLOAD_DOCUMENTS_PATH: Joi.string().default('./uploads/documents'),
+  UPLOAD_MAX_FILE_SIZE_BYTES: Joi.number()
+    .min(1024) // 1KB minimum
+    .max(50 * 1024 * 1024) // 50MB maximum
+    .default(5 * 1024 * 1024), // 5MB default
+  UPLOAD_MAX_DOCUMENTS_PER_APPLICATION: Joi.number().min(1).max(50).default(10),
+  UPLOAD_ALLOWED_MIME_TYPES: Joi.string().default(
+    'image/jpeg,image/png,image/gif,image/webp,application/pdf'
+  )
 })

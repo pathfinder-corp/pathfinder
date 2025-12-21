@@ -1,7 +1,8 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger'
 import { Expose, Type } from 'class-transformer'
 
-import { ApplicationStatus } from '../entities/mentor-application.entity'
+import { ApplicationStatus } from '../entities/application-status.enum'
+import { DocumentResponseDto } from './document-response.dto'
 
 export class ApplicationDataDto {
   @ApiPropertyOptional()
@@ -129,6 +130,14 @@ export class ApplicationResponseDto {
   @Expose()
   @Type(() => Date)
   updatedAt: Date
+
+  @ApiPropertyOptional({
+    type: [DocumentResponseDto],
+    description: 'List of attached documents'
+  })
+  @Expose()
+  @Type(() => DocumentResponseDto)
+  documents?: DocumentResponseDto[]
 }
 
 export class AdminApplicationResponseDto extends ApplicationResponseDto {

@@ -135,6 +135,72 @@ export class MentorshipsService {
     return { mentorships, total }
   }
 
+  /**
+   * Find all mentorships for admin view
+   */
+  async findAllForAdmin(query: {
+    mentorId?: string
+    menteeId?: string
+    status?: string
+    skip: number
+    take: number
+  }): Promise<{ mentorships: Mentorship[]; total: number }> {
+    const qb = this.mentorshipRepository
+      .createQueryBuilder('mentorship')
+      .leftJoinAndSelect('mentorship.mentor', 'mentor')
+      .leftJoinAndSelect('mentorship.student', 'student')
+
+    if (query.mentorId) {
+      qb.andWhere('mentorship.mentor_id = :mentorId', {
+        mentorId: query.mentorId
+      })
+    }
+
+    if (query.menteeId) {
+      qb.andWhere('mentorship.student_id = :menteeId', {
+        menteeId: query.menteeId
+      })
+    }
+
+    if (query.status) {
+      qb.andWhere('mentorship.status = :status', { status: query.status })
+    }
+
+    const [mentorships, total] = await qb
+      .orderBy('mentorship.startedAt', 'DESC')
+      .skip(query.skip)
+      .take(query.take)
+      .getManyAndCount()
+
+    return { mentorships, total }
+  }
+
+  /**
+   * Get mentorship statistics for admin dashboard
+   */
+  async getMentorshipStats(): Promise<{
+    total: number
+    active: number
+    completed: number
+    cancelled: number
+  }> {
+    const total = await this.mentorshipRepository.count()
+
+    const active = await this.mentorshipRepository.count({
+      where: { status: MentorshipStatus.ACTIVE }
+    })
+
+    const completed = await this.mentorshipRepository.count({
+      where: { status: MentorshipStatus.ENDED }
+    })
+
+    const cancelled = await this.mentorshipRepository.count({
+      where: { status: MentorshipStatus.CANCELLED }
+    })
+
+    return { total, active, completed, cancelled }
+  }
+
   async findActiveBetween(
     mentorId: string,
     studentId: string

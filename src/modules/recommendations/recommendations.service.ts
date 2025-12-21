@@ -106,10 +106,6 @@ export class RecommendationsService {
       })
     }))
 
-    this.logger.debug(
-      `Generated ${recommendations.length} recommendations for user ${userId}`
-    )
-
     return {
       recommendations,
       total,

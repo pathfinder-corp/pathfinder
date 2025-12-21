@@ -1,8 +1,25 @@
-import { Injectable, Logger, NotFoundException } from '@nestjs/common'
+import {
+  Injectable,
+  Logger,
+  NotFoundException
+} from '@nestjs/common'
+import { ConfigService } from '@nestjs/config'
 import { InjectRepository } from '@nestjs/typeorm'
 import { Repository } from 'typeorm'
 
 import { AuditLogService } from '../../common/services/audit-log.service'
+import {
+  UpdateDocumentDto,
+  UploadDocumentDto
+} from '../mentor-applications/dto/upload-document.dto'
+import {
+  ApplicationDocument,
+  DocumentType,
+  DocumentVerificationStatus
+} from '../mentor-applications/entities/application-document.entity'
+import { ApplicationStatus } from '../mentor-applications/entities/application-status.enum'
+import { MentorApplication } from '../mentor-applications/entities/mentor-application.entity'
+import { DocumentUploadService } from '../mentor-applications/services/document-upload.service'
 import { UserRole } from '../users/entities/user.entity'
 import { SearchMentorsQueryDto } from './dto/search-mentors.dto'
 import { UpdateMentorProfileDto } from './dto/update-profile.dto'
@@ -15,7 +32,13 @@ export class MentorProfilesService {
   constructor(
     @InjectRepository(MentorProfile)
     private readonly profileRepository: Repository<MentorProfile>,
-    private readonly auditLogService: AuditLogService
+    @InjectRepository(MentorApplication)
+    private readonly applicationRepository: Repository<MentorApplication>,
+    @InjectRepository(ApplicationDocument)
+    private readonly documentRepository: Repository<ApplicationDocument>,
+    private readonly auditLogService: AuditLogService,
+    private readonly configService: ConfigService,
+    private readonly documentUploadService: DocumentUploadService
   ) {}
 
   async createProfile(
@@ -207,6 +230,81 @@ export class MentorProfilesService {
     return { mentors, total }
   }
 
+  /**
+   * Find all mentor profiles for admin (includes inactive)
+   */
+  async findAllForAdmin(query: {
+    isActive?: boolean
+    isAcceptingMentees?: boolean
+    search?: string
+    skip: number
+    take: number
+  }): Promise<{ mentors: MentorProfile[]; total: number }> {
+    const qb = this.profileRepository
+      .createQueryBuilder('profile')
+      .leftJoinAndSelect('profile.user', 'user')
+      .andWhere('user.role = :role', { role: UserRole.MENTOR })
+
+    if (query.isActive !== undefined) {
+      qb.andWhere('profile.is_active = :isActive', { isActive: query.isActive })
+    }
+
+    if (query.isAcceptingMentees !== undefined) {
+      qb.andWhere('profile.is_accepting_mentees = :isAccepting', {
+        isAccepting: query.isAcceptingMentees
+      })
+    }
+
+    if (query.search) {
+      qb.andWhere(
+        `(
+          user.firstName ILIKE :search OR 
+          user.lastName ILIKE :search OR 
+          user.email ILIKE :search OR
+          profile.headline ILIKE :search OR 
+          profile.bio ILIKE :search
+        )`,
+        { search: `%${query.search}%` }
+      )
+    }
+
+    qb.orderBy('profile.createdAt', 'DESC')
+
+    const [mentors, total] = await qb
+      .skip(query.skip)
+      .take(query.take)
+      .getManyAndCount()
+
+    return { mentors, total }
+  }
+
+  /**
+   * Get mentor statistics for admin dashboard
+   */
+  async getMentorStats(): Promise<{
+    total: number
+    active: number
+    inactive: number
+    acceptingMentees: number
+  }> {
+    const total = await this.profileRepository.count()
+
+    const active = await this.profileRepository.count({
+      where: { isActive: true }
+    })
+
+    const acceptingMentees = await this.profileRepository.count({
+      where: { isActive: true, isAcceptingMentees: true }
+    })
+
+    return {
+      total,
+      active,
+      inactive: total - active,
+      acceptingMentees
+    }
+  }
+
   async findPublicProfile(profileId: string): Promise<MentorProfile> {
     const profile = await this.profileRepository.findOne({
       where: { id: profileId, isActive: true },
@@ -259,5 +357,189 @@ export class MentorProfilesService {
     })
 
     return this.findById(profile.id)
+  }
+
+  /**
+   * Get verified documents for a mentor
+   * Documents are from the approved application that made them a mentor
+   */
+  async getMentorDocuments(userId: string): Promise<ApplicationDocument[]> {
+    // Find the approved application for this user
+    const application = await this.applicationRepository.findOne({
+      where: {
+        userId,
+        status: ApplicationStatus.APPROVED
+      },
+      order: { createdAt: 'DESC' }
+    })
+
+    if (!application) {
+      return []
+    }
+
+    // Get verified documents from this application
+    const documents = await this.documentRepository.find({
+      where: {
+        applicationId: application.id,
+        verificationStatus: DocumentVerificationStatus.VERIFIED
+      },
+      order: { displayOrder: 'ASC', createdAt: 'ASC' }
+    })
+
+    return documents
+  }
+
+  /**
+   * Get all documents (including pending) for mentor's own view
+   */
+  async getMyDocuments(userId: string): Promise<ApplicationDocument[]> {
+    // Find any application for this user (approved or pending)
+    const application = await this.applicationRepository.findOne({
+      where: { userId },
+      order: { createdAt: 'DESC' }
+    })
+
+    if (!application) {
+      return []
+    }
+
+    // Get all documents from this application
+    const documents = await this.documentRepository.find({
+      where: { applicationId: application.id },
+      order: { displayOrder: 'ASC', createdAt: 'ASC' }
+    })
+
+    return documents
+  }
+
+  /**
+   * Get mentor profile with verified documents
+   */
+  async findPublicProfileWithDocuments(
+    profileId: string
+  ): Promise<{ profile: MentorProfile; documents: ApplicationDocument[] }> {
+    const profile = await this.findPublicProfile(profileId)
+    const documents = await this.getMentorDocuments(profile.userId)
+
+    return { profile, documents }
+  }
+
+  /**
+   * Get approved application for mentor to add documents
+   */
+  private async getApprovedApplication(
+    userId: string
+  ): Promise<MentorApplication> {
+    const application = await this.applicationRepository.findOne({
+      where: {
+        userId,
+        status: ApplicationStatus.APPROVED
+      },
+      relations: ['documents'],
+      order: { createdAt: 'DESC' }
+    })
+
+    if (!application) {
+      throw new NotFoundException(
+        'No approved application found. Please contact support.'
+      )
+    }
+
+    return application
+  }
+
+  /**
+   * Upload a new document for mentor (uses ImageKit via DocumentUploadService)
+   */
+  async uploadDocument(
+    userId: string,
+    file: Express.Multer.File,
+    dto: UploadDocumentDto
+  ): Promise<ApplicationDocument> {
+    // Get the approved application
+    const application = await this.getApprovedApplication(userId)
+
+    // Delegate to DocumentUploadService (which handles ImageKit upload)
+    return this.documentUploadService.uploadDocument(
+      application.id,
+      userId,
+      {
+        fieldname: file.fieldname,
+        originalname: file.originalname,
+        encoding: file.encoding,
+        mimetype: file.mimetype,
+        buffer: file.buffer,
+        size: file.size
+      },
+      dto
+    )
+  }
+
+  /**
+   * Update document metadata
+   */
+  async updateDocument(
+    userId: string,
+    documentId: string,
+    dto: UpdateDocumentDto
+  ): Promise<ApplicationDocument> {
+    // Find document and verify ownership
+    const document = await this.documentRepository.findOne({
+      where: { id: documentId },
+      relations: ['application']
+    })
+
+    if (!document) {
+      throw new NotFoundException('Document not found')
+    }
+
+    if (document.application?.userId !== userId) {
+      throw new NotFoundException('Document not found')
+    }
+
+    // Update allowed fields
+    const updateData: Partial<ApplicationDocument> = {}
+
+    if (dto.type !== undefined) updateData.type = dto.type as DocumentType
+    if (dto.title !== undefined) updateData.title = dto.title
+    if (dto.description !== undefined) updateData.description = dto.description
+    if (dto.issuedYear !== undefined) updateData.issuedYear = dto.issuedYear
+    if (dto.issuingOrganization !== undefined)
+      updateData.issuingOrganization = dto.issuingOrganization
+    if (dto.displayOrder !== undefined) updateData.displayOrder = dto.displayOrder
+
+    await this.documentRepository.update({ id: documentId }, updateData)
+
+    await this.auditLogService.log({
+      actorId: userId,
+      action: 'document_updated',
+      entityType: 'application_document',
+      entityId: documentId,
+      changes: updateData
+    })
+
+    return this.documentRepository.findOneOrFail({ where: { id: documentId } })
+  }
+
+  /**
+   * Delete a document (uses DocumentUploadService for ImageKit cleanup)
+   */
+  async deleteDocument(userId: string, documentId: string): Promise<void> {
+    // Find document and verify ownership
+    const document = await this.documentRepository.findOne({
+      where: { id: documentId },
+      relations: ['application']
+    })
+
+    if (!document) {
+      throw new NotFoundException('Document not found')
+    }
+
+    if (document.application?.userId !== userId) {
+      throw new NotFoundException('Document not found')
+    }
+
+    // Delegate to DocumentUploadService (which handles ImageKit deletion)
+    await this.documentUploadService.deleteDocument(documentId, userId)
   }
 }

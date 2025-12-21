@@ -15,9 +15,13 @@
     "test:cov": "jest --coverage",
     "test:debug": "node --inspect-brk -r tsconfig-paths/register -r ts-node/register node_modules/.bin/jest --runInBand",
     "test:e2e": "jest --config ./test/jest-e2e.json",
-    "migration:generate": "typeorm-ts-node-commonjs migration:generate",
-    "migration:run": "typeorm-ts-node-commonjs migration:run",
-    "migration:revert": "typeorm-ts-node-commonjs migration:revert"
+    "migration:generate": "typeorm-ts-node-commonjs -d data-source.ts migration:generate",
+    "migration:run": "typeorm-ts-node-commonjs -d data-source.ts migration:run",
+    "migration:revert": "typeorm-ts-node-commonjs -d data-source.ts migration:revert",
+    "migration:show": "typeorm-ts-node-commonjs -d data-source.ts migration:show",
+    "migrate:imagekit": "ts-node -r tsconfig-paths/register src/scripts/migrate-documents-to-imagekit.ts",
+    "migrate:imagekit:dry": "ts-node -r tsconfig-paths/register src/scripts/migrate-documents-to-imagekit.ts --dry-run",
+    "migrate:imagekit:delete": "ts-node -r tsconfig-paths/register src/scripts/migrate-documents-to-imagekit.ts --delete-local"
   },
   "dependencies": {
     "@google/genai": "^1.28.0",
@@ -38,6 +42,7 @@
     "class-validator": "^0.14.2",
     "compression": "^1.7.4",
     "helmet": "^8.1.0",
+    "imagekit": "^6.0.0",
     "ioredis": "^5.8.2",
     "joi": "^18.0.1",
     "nodemailer": "^7.0.10",
@@ -59,6 +64,7 @@
     "@types/compression": "^1.8.1",
     "@types/express": "^5.0.3",
     "@types/jest": "^30.0.0",
+    "@types/multer": "^2.0.0",
     "@types/node": "^22.18.13",
     "@types/nodemailer": "^7.0.3",
     "@types/passport-jwt": "^4.0.1",
@@ -97,6 +103,5 @@
     ],
     "coverageDirectory": "../coverage",
     "testEnvironment": "node"
-  },
-  "packageManager": "yarn@4.10.3"
+  }
 }

@@ -142,6 +142,30 @@ export default () => {
           .split(',')
           .map((k) => k.trim())
       }
+    },
+    upload: {
+      maxFileSizeBytes: parseIntSafe(
+        process.env.UPLOAD_MAX_FILE_SIZE_BYTES,
+        5 * 1024 * 1024
+      ),
+      maxDocumentsPerApplication: parseIntSafe(
+        process.env.UPLOAD_MAX_DOCUMENTS_PER_APPLICATION,
+        10
+      ),
+      allowedMimeTypes: (
+        process.env.UPLOAD_ALLOWED_MIME_TYPES ||
+        'image/jpeg,image/png,image/gif,image/webp,application/pdf'
+      )
+        .split(',')
+        .map((t) => t.trim())
+    },
+    imagekit: {
+      enabled: parseBoolean(process.env.IMAGEKIT_ENABLED, true),
+      publicKey: process.env.IMAGEKIT_PUBLIC_KEY || '',
+      privateKey: process.env.IMAGEKIT_PRIVATE_KEY || '',
+      urlEndpoint:
+        process.env.IMAGEKIT_URL_ENDPOINT || 'https://ik.imagekit.io/3dteacher',
+      folder: process.env.IMAGEKIT_FOLDER || '/mentor-documents'
     }
   }
 }

@@ -16,10 +16,8 @@ import { UsersService } from '../users/users.service'
 import { CreateApplicationDto } from './dto/create-application.dto'
 import { ReviewDecision } from './dto/review-application.dto'
 import { ApplicationStatusHistory } from './entities/application-status-history.entity'
-import {
-  ApplicationStatus,
-  MentorApplication
-} from './entities/mentor-application.entity'
+import { ApplicationStatus } from './entities/application-status.enum'
+import { MentorApplication } from './entities/mentor-application.entity'
 import { MentorApplicationsService } from './mentor-applications.service'
 
 describe('MentorApplicationsService', () => {

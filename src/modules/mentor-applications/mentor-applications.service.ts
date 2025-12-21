@@ -24,10 +24,8 @@ import {
   ReviewDecision
 } from './dto/review-application.dto'
 import { ApplicationStatusHistory } from './entities/application-status-history.entity'
-import {
-  ApplicationStatus,
-  MentorApplication
-} from './entities/mentor-application.entity'
+import { ApplicationStatus } from './entities/application-status.enum'
+import { MentorApplication } from './entities/mentor-application.entity'
 import { ContentValidatorService } from './services/content-validator.service'
 
 @Injectable()
@@ -261,7 +259,7 @@ export class MentorApplicationsService {
     return this.applicationRepository.find({
       where: { userId },
       order: { createdAt: 'DESC' },
-      relations: ['statusHistory']
+      relations: ['statusHistory', 'documents']
     })
   }
 
@@ -272,7 +270,8 @@ export class MentorApplicationsService {
         'user',
         'reviewer',
         'statusHistory',
-        'statusHistory.changedByUser'
+        'statusHistory.changedByUser',
+        'documents'
       ]
     })
 
@@ -296,6 +295,7 @@ export class MentorApplicationsService {
     const qb = this.applicationRepository
       .createQueryBuilder('application')
       .leftJoinAndSelect('application.user', 'user')
+      .leftJoinAndSelect('application.documents', 'documents')
       .where(whereClause)
 
     // Apply sorting
@@ -615,5 +615,23 @@ export class MentorApplicationsService {
       ipHash: r.ipHash,
       count: parseInt(r.count, 10)
     }))
+  }
+
+  /**
+   * Helper method to ensure documents are loaded for an application
+   */
+  async ensureDocumentsLoaded(
+    application: MentorApplication
+  ): Promise<MentorApplication> {
+    if (!application.documents) {
+      const fullApp = await this.applicationRepository.findOne({
+        where: { id: application.id },
+        relations: ['documents']
+      })
+      if (fullApp) {
+        application.documents = fullApp.documents
+      }
+    }
+    return application
   }
 }
