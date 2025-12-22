@@ -22,6 +22,8 @@ import { plainToInstance } from 'class-transformer'
 
 import { CurrentUser } from '../auth/decorators/current-user.decorator'
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard'
+import { ChatGateway } from '../chat/gateways/chat.gateway'
+import { ChatService } from '../chat/services/chat.service'
 import { User } from '../users/entities/user.entity'
 import { CreateMentorshipRequestDto } from './dto/create-request.dto'
 import { ListRequestsQueryDto } from './dto/list-requests.dto'
@@ -37,7 +39,11 @@ import { MentorshipRequestsService } from './mentorship-requests.service'
 @UseGuards(JwtAuthGuard)
 @Controller('mentorship-requests')
 export class MentorshipRequestsController {
-  constructor(private readonly requestsService: MentorshipRequestsService) {}
+  constructor(
+    private readonly requestsService: MentorshipRequestsService,
+    private readonly chatGateway: ChatGateway,
+    private readonly chatService: ChatService
+  ) {}
 
   @Post()
   @Throttle({ default: { limit: 10, ttl: 3600000 } }) // 10 requests per hour
@@ -119,6 +125,45 @@ export class MentorshipRequestsController {
     @Body() dto: AcceptRequestDto
   ): Promise<MentorshipRequestResponseDto> {
     const request = await this.requestsService.accept(id, user.id, dto)
+
+    // Emit real-time event for mentorship started
+    try {
+      const mentorship = await this.requestsService.getMentorshipFromRequest(
+        request.id
+      )
+      if (mentorship) {
+        // Ensure conversation exists and is linked to the new mentorship
+        // This will reuse existing conversation if available and update mentorshipId
+        const conversation =
+          await this.chatService.getOrCreateConversation(mentorship.id)
+        
+        if (conversation) {
+          const eventData = {
+            mentorshipId: mentorship.id,
+            status: mentorship.status,
+            conversationId: conversation.id
+          }
+
+          // Emit to conversation room (for users already in conversation)
+          this.chatGateway.server
+            .to(`conversation:${conversation.id}`)
+            .emit('mentorship:started', eventData)
+
+          // Also emit to user rooms to ensure both parties receive the event
+          // even if they haven't joined the conversation room yet
+          this.chatGateway.server
+            .to(`user:${mentorship.mentorId}`)
+            .emit('mentorship:started', eventData)
+          
+          this.chatGateway.server
+            .to(`user:${mentorship.studentId}`)
+            .emit('mentorship:started', eventData)
+        }
+      }
+    } catch (error) {
+      // Log error but don't fail the request
+      console.error('Failed to emit mentorship:started event:', error)
+    }
 
     return plainToInstance(MentorshipRequestResponseDto, request, {
       excludeExtraneousValues: true

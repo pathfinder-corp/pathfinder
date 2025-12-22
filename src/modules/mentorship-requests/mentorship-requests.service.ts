@@ -370,6 +370,14 @@ export class MentorshipRequestsService {
     return request
   }
 
+  async getMentorshipFromRequest(requestId: string) {
+    const request = await this.findOne(requestId)
+    return await this.mentorshipsService.findActiveBetween(
+      request.mentorId,
+      request.studentId
+    )
+  }
+
   /**
    * Populates mentorProfileId for a single request
    */

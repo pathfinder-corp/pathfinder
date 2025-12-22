@@ -1,7 +1,6 @@
 import {
   Body,
   Controller,
-  Delete,
   Get,
   HttpCode,
   HttpStatus,
@@ -83,13 +82,36 @@ export class AdminUsersController {
     return this.adminUsersService.update(id, updateDto, currentUser)
   }
 
-  @Delete(':id')
-  @HttpCode(HttpStatus.NO_CONTENT)
-  @ApiOperation({ summary: 'Delete a user' })
-  @ApiResponse({ status: 204, description: 'User deleted successfully' })
+  @Patch(':id/ban')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Ban a user (suspend account)' })
+  @ApiResponse({
+    status: 200,
+    description: 'User banned successfully',
+    type: AdminUserResponseDto
+  })
   @ApiResponse({ status: 404, description: 'User not found' })
-  @ApiResponse({ status: 403, description: 'Cannot delete admin users' })
-  async remove(@Param('id', new ParseUUIDPipe()) id: string): Promise<void> {
-    await this.adminUsersService.remove(id)
+  @ApiResponse({ status: 403, description: 'Cannot ban admin users' })
+  async banUser(
+    @Param('id', new ParseUUIDPipe()) id: string,
+    @CurrentUser() currentUser: User
+  ): Promise<AdminUserResponseDto> {
+    return this.adminUsersService.banUser(id, currentUser)
+  }
+
+  @Patch(':id/unban')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Unban a user (reactivate account)' })
+  @ApiResponse({
+    status: 200,
+    description: 'User unbanned successfully',
+    type: AdminUserResponseDto
+  })
+  @ApiResponse({ status: 404, description: 'User not found' })
+  async unbanUser(
+    @Param('id', new ParseUUIDPipe()) id: string,
+    @CurrentUser() currentUser: User
+  ): Promise<AdminUserResponseDto> {
+    return this.adminUsersService.unbanUser(id, currentUser)
   }
 }

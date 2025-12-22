@@ -8,6 +8,7 @@ import {
 import { InjectRepository } from '@nestjs/typeorm'
 import { Repository } from 'typeorm'
 
+import { MentorProfilesService } from '../../mentor-profiles/mentor-profiles.service'
 import { Mentorship, MentorshipStatus } from '../../mentorships/entities/mentorship.entity'
 import { MentorshipsService } from '../../mentorships/mentorships.service'
 import {
@@ -27,37 +28,165 @@ export class ChatService {
     private readonly conversationRepository: Repository<Conversation>,
     @InjectRepository(Message)
     private readonly messageRepository: Repository<Message>,
-    private readonly mentorshipsService: MentorshipsService
+    private readonly mentorshipsService: MentorshipsService,
+    private readonly mentorProfilesService: MentorProfilesService
   ) {}
 
   async getOrCreateConversation(mentorshipId: string): Promise<Conversation> {
+    const mentorship = await this.mentorshipsService.findOne(mentorshipId)
+
+    if (mentorship.status !== MentorshipStatus.ACTIVE) {
+      throw new BadRequestException(
+        'Cannot create conversation for inactive mentorship'
+      )
+    }
+
     let conversation = await this.conversationRepository.findOne({
       where: { mentorshipId },
       relations: ['mentorship', 'participant1', 'participant2']
     })
 
     if (!conversation) {
-      const mentorship = await this.mentorshipsService.findOne(mentorshipId)
+      const existingConversation = await this.conversationRepository
+        .createQueryBuilder('conversation')
+        .leftJoinAndSelect('conversation.mentorship', 'mentorship')
+        .leftJoinAndSelect('conversation.participant1', 'participant1')
+        .leftJoinAndSelect('conversation.participant2', 'participant2')
+        .where(
+          '(conversation.participant1_id = :mentorId AND conversation.participant2_id = :studentId) OR (conversation.participant1_id = :studentId AND conversation.participant2_id = :mentorId)',
+          { mentorId: mentorship.mentorId, studentId: mentorship.studentId }
+        )
+        .orderBy('conversation.last_message_at', 'DESC', 'NULLS LAST')
+        .getOne()
 
-      if (mentorship.status !== MentorshipStatus.ACTIVE) {
-        throw new BadRequestException(
-          'Cannot create conversation for inactive mentorship'
+      if (existingConversation) {
+        // Check if the existing conversation's mentorshipId is different
+        // If same, no need to update
+        if (existingConversation.mentorshipId !== mentorshipId) {
+          // Check if the new mentorship already has a conversation
+          const existingMentorshipConversation = await this.conversationRepository.findOne({
+            where: { mentorshipId }
+          })
+          
+          if (existingMentorshipConversation && existingMentorshipConversation.id !== existingConversation.id) {
+            // The new mentorship already has a different conversation
+            // This shouldn't happen in normal flow, but use the existing one
+            this.logger.warn(
+              `Mentorship ${mentorshipId} already has conversation ${existingMentorshipConversation.id}, but found existing conversation ${existingConversation.id} between same participants. Using existing mentorship conversation.`
+            )
+            conversation = existingMentorshipConversation
+          } else {
+            // Update mentorshipId to the new active mentorship
+            // Use update query to avoid unique constraint issues
+            const oldMentorshipId = existingConversation.mentorshipId
+            await this.conversationRepository.update(
+              { id: existingConversation.id },
+              { mentorshipId }
+            )
+            
+            // Verify the update was successful
+            const updatedConversation = await this.conversationRepository.findOne({
+              where: { id: existingConversation.id }
+            })
+            
+            if (!updatedConversation || updatedConversation.mentorshipId !== mentorshipId) {
+              this.logger.error(
+                `Failed to update conversation ${existingConversation.id} mentorshipId from ${oldMentorshipId} to ${mentorshipId}`
+              )
+              throw new BadRequestException(
+                `Failed to update conversation mentorshipId. Expected ${mentorshipId}, got ${updatedConversation?.mentorshipId}`
+              )
+            }
+            
+            // Reload conversation with updated mentorship relation
+            conversation = await this.conversationRepository.findOne({
+              where: { id: existingConversation.id },
+              relations: ['mentorship', 'participant1', 'participant2']
+            })
+            
+            if (!conversation) {
+              throw new NotFoundException(
+                `Failed to reload conversation ${existingConversation.id} after updating mentorshipId`
+              )
+            }
+            
+            // Ensure mentorship relation is refreshed by manually setting it
+            conversation.mentorship = mentorship
+            
+            this.logger.log(
+              `Reused conversation ${conversation.id} for new mentorship ${mentorshipId} (was ${oldMentorshipId})`
+            )
+          }
+        } else {
+          // Already linked to this mentorship, just reload with relations
+          conversation = await this.conversationRepository.findOne({
+            where: { id: existingConversation.id },
+            relations: ['mentorship', 'participant1', 'participant2']
+          })
+          
+          if (!conversation) {
+            throw new NotFoundException(
+              `Failed to reload conversation ${existingConversation.id}`
+            )
+          }
+          
+          // Ensure mentorship relation is refreshed
+          conversation.mentorship = mentorship
+        }
+      } else {
+        // Create new conversation
+        conversation = this.conversationRepository.create({
+          mentorshipId,
+          participant1Id: mentorship.mentorId,
+          participant2Id: mentorship.studentId
+        })
+
+        conversation = await this.conversationRepository.save(conversation)
+        
+        // Reload with relations
+        conversation = await this.conversationRepository.findOne({
+          where: { id: conversation.id },
+          relations: ['mentorship', 'participant1', 'participant2']
+        })
+        
+        if (!conversation) {
+          throw new NotFoundException(
+            `Failed to reload newly created conversation`
+          )
+        }
+        
+        this.logger.log(
+          `Created conversation ${conversation.id} for mentorship ${mentorshipId}`
         )
       }
-
-      conversation = this.conversationRepository.create({
-        mentorshipId,
-        participant1Id: mentorship.mentorId,
-        participant2Id: mentorship.studentId
-      })
-
-      await this.conversationRepository.save(conversation)
-      this.logger.log(
-        `Created conversation ${conversation.id} for mentorship ${mentorshipId}`
-      )
     }
 
+    // Populate mentorProfileId
+    await this.populateMentorProfileId(conversation)
+
     return conversation
+  }
+
+  /**
+   * Populates mentorProfileId for a single conversation
+   */
+  private async populateMentorProfileId(
+    conversation: Conversation
+  ): Promise<void> {
+    if (!conversation.mentorship?.mentorId) {
+      return
+    }
+
+    try {
+      const mentorProfile = await this.mentorProfilesService.findByUserId(
+        conversation.mentorship.mentorId
+      )
+      if (mentorProfile) {
+        ;(conversation as any).mentorProfileId = mentorProfile.id
+      }
+    } catch {
+      // Mentor profile may not exist, leave mentorProfileId undefined
+    }
   }
 
   async getConversationById(conversationId: string): Promise<Conversation> {
@@ -70,11 +199,23 @@ export class ChatService {
       throw new NotFoundException('Conversation not found')
     }
 
+    // Populate mentorProfileId
+    await this.populateMentorProfileId(conversation)
+
     return conversation
   }
 
+  async getConversationByMentorshipId(
+    mentorshipId: string
+  ): Promise<Conversation | null> {
+    return await this.conversationRepository.findOne({
+      where: { mentorshipId },
+      relations: ['mentorship', 'participant1', 'participant2']
+    })
+  }
+
   async getUserConversations(userId: string): Promise<Conversation[]> {
-    return await this.conversationRepository
+    const conversations = await this.conversationRepository
       .createQueryBuilder('conversation')
       .leftJoinAndSelect('conversation.mentorship', 'mentorship')
       .leftJoinAndSelect('conversation.participant1', 'participant1')
@@ -83,11 +224,58 @@ export class ChatService {
         '(conversation.participant1_id = :userId OR conversation.participant2_id = :userId)',
         { userId }
       )
-      .andWhere('mentorship.status = :status', {
-        status: MentorshipStatus.ACTIVE
-      })
       .orderBy('conversation.last_message_at', 'DESC', 'NULLS LAST')
       .getMany()
+
+    // Populate mentorProfileId for each conversation
+    await this.populateMentorProfileIds(conversations)
+
+    return conversations
+  }
+
+  /**
+   * Populates mentorProfileId for multiple conversations efficiently
+   */
+  private async populateMentorProfileIds(
+    conversations: Conversation[]
+  ): Promise<void> {
+    if (conversations.length === 0) {
+      return
+    }
+
+    // Get unique mentor IDs
+    const mentorIds = new Set<string>()
+    conversations.forEach((conv) => {
+      if (conv.mentorship?.mentorId) {
+        mentorIds.add(conv.mentorship.mentorId)
+      }
+    })
+
+    // Fetch all mentor profiles in batch
+    const mentorProfileMap = new Map<string, string>()
+    await Promise.all(
+      Array.from(mentorIds).map(async (mentorId) => {
+        try {
+          const mentorProfile =
+            await this.mentorProfilesService.findByUserId(mentorId)
+          if (mentorProfile) {
+            mentorProfileMap.set(mentorId, mentorProfile.id)
+          }
+        } catch {
+          // Mentor profile may not exist, skip
+        }
+      })
+    )
+
+    // Assign mentorProfileId to each conversation
+    conversations.forEach((conv) => {
+      if (conv.mentorship?.mentorId) {
+        const mentorProfileId = mentorProfileMap.get(conv.mentorship.mentorId)
+        if (mentorProfileId) {
+          ;(conv as any).mentorProfileId = mentorProfileId
+        }
+      }
+    })
   }
 
   async sendMessage(
@@ -105,8 +293,14 @@ export class ChatService {
       throw new ForbiddenException('Not a participant of this conversation')
     }
 
-    // Verify mentorship is active
-    if (conversation.mentorship?.status !== MentorshipStatus.ACTIVE) {
+    const mentorship = await this.mentorshipsService.findOne(conversation.mentorshipId)
+    if (!mentorship) {
+      throw new NotFoundException(
+        `Mentorship ${conversation.mentorshipId} not found for conversation ${conversationId}`
+      )
+    }
+
+    if (mentorship.status !== MentorshipStatus.ACTIVE) {
       throw new BadRequestException(
         'Cannot send message to inactive mentorship'
       )
@@ -149,7 +343,7 @@ export class ChatService {
 
     return {
       message: savedMessage!,
-      mentorship: conversation.mentorship!
+      mentorship
     }
   }
 
@@ -167,6 +361,13 @@ export class ChatService {
 
     if (!conversation) {
       throw new NotFoundException('Conversation not found')
+    }
+
+    const mentorship = await this.mentorshipsService.findOne(conversation.mentorshipId)
+    if (!mentorship) {
+      throw new NotFoundException(
+        `Mentorship ${conversation.mentorshipId} not found for conversation ${conversationId}`
+      )
     }
 
     const qb = this.messageRepository
@@ -203,7 +404,7 @@ export class ChatService {
       messages: messages.reverse(),
       hasMore,
       nextCursor,
-      mentorship: conversation.mentorship!
+      mentorship
     }
   }
 
@@ -237,9 +438,16 @@ export class ChatService {
 
     this.logger.log(`Message ${messageId} edited by user ${userId}`)
 
+    const mentorship = await this.mentorshipsService.findOne(message.conversation!.mentorshipId)
+    if (!mentorship) {
+      throw new NotFoundException(
+        `Mentorship ${message.conversation!.mentorshipId} not found for conversation ${message.conversationId}`
+      )
+    }
+
     return {
       message,
-      mentorship: message.conversation!.mentorship!
+      mentorship
     }
   }
 
@@ -269,9 +477,16 @@ export class ChatService {
 
     this.logger.log(`Message ${messageId} deleted by user ${userId}`)
 
+    const mentorship = await this.mentorshipsService.findOne(message.conversation!.mentorshipId)
+    if (!mentorship) {
+      throw new NotFoundException(
+        `Mentorship ${message.conversation!.mentorshipId} not found for conversation ${message.conversationId}`
+      )
+    }
+
     return {
       message,
-      mentorship: message.conversation!.mentorship!
+      mentorship
     }
   }
 

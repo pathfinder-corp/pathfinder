@@ -1,6 +1,7 @@
-import { Module } from '@nestjs/common'
+import { forwardRef, Module } from '@nestjs/common'
 import { TypeOrmModule } from '@nestjs/typeorm'
 
+import { ChatModule } from '../chat/chat.module'
 import { MentorProfilesModule } from '../mentor-profiles/mentor-profiles.module'
 import { MentorshipsModule } from '../mentorships/mentorships.module'
 import { NotificationsModule } from '../notifications/notifications.module'
@@ -13,7 +14,8 @@ import { MentorshipRequestsService } from './mentorship-requests.service'
     TypeOrmModule.forFeature([MentorshipRequest]),
     MentorProfilesModule,
     MentorshipsModule,
-    NotificationsModule
+    NotificationsModule,
+    forwardRef(() => ChatModule)
   ],
   controllers: [MentorshipRequestsController],
   providers: [MentorshipRequestsService],

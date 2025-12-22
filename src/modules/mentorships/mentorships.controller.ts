@@ -2,11 +2,13 @@ import {
   Body,
   Controller,
   Get,
+  Inject,
   Param,
   ParseUUIDPipe,
   Post,
   Query,
-  UseGuards
+  UseGuards,
+  forwardRef
 } from '@nestjs/common'
 import {
   ApiBearerAuth,
@@ -18,6 +20,8 @@ import { plainToInstance } from 'class-transformer'
 
 import { CurrentUser } from '../auth/decorators/current-user.decorator'
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard'
+import { ChatGateway } from '../chat/gateways/chat.gateway'
+import { ChatService } from '../chat/services/chat.service'
 import { User } from '../users/entities/user.entity'
 import { EndMentorshipDto } from './dto/end-mentorship.dto'
 import { ListMentorshipsQueryDto } from './dto/list-mentorships.dto'
@@ -32,7 +36,13 @@ import { MentorshipsService } from './mentorships.service'
 @UseGuards(JwtAuthGuard)
 @Controller('mentorships')
 export class MentorshipsController {
-  constructor(private readonly mentorshipsService: MentorshipsService) {}
+  constructor(
+    private readonly mentorshipsService: MentorshipsService,
+    @Inject(forwardRef(() => ChatGateway))
+    private readonly chatGateway: ChatGateway,
+    @Inject(forwardRef(() => ChatService))
+    private readonly chatService: ChatService
+  ) {}
 
   @Get()
   @ApiOperation({ summary: 'List my mentorships' })
@@ -96,6 +106,24 @@ export class MentorshipsController {
     @Body() dto: EndMentorshipDto
   ): Promise<MentorshipResponseDto> {
     const mentorship = await this.mentorshipsService.end(id, user.id, dto)
+
+    try {
+      const conversation =
+        await this.chatService.getConversationByMentorshipId(id)
+      if (conversation) {
+        this.chatGateway.server
+          .to(`conversation:${conversation.id}`)
+          .emit('mentorship:ended', {
+            mentorshipId: id,
+            status: mentorship.status,
+            endReason: mentorship.endReason,
+            endedBy: mentorship.endedBy,
+            endedAt: mentorship.endedAt
+          })
+      }
+    } catch {
+      // Conversation may not exist, ignore error
+    }
 
     return plainToInstance(MentorshipResponseDto, mentorship, {
       excludeExtraneousValues: true

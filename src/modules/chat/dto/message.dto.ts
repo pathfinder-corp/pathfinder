@@ -146,6 +146,12 @@ export class MessageListResponseDto {
 
   @ApiPropertyOptional()
   nextCursor?: string
+
+  @ApiPropertyOptional({ enum: ['active', 'ended', 'cancelled'] })
+  mentorshipStatus?: string
+
+  @ApiPropertyOptional()
+  mentorshipId?: string
 }
 
 export class ConversationResponseDto {
@@ -156,6 +162,16 @@ export class ConversationResponseDto {
   @ApiProperty()
   @Expose()
   mentorshipId: string
+
+  @ApiPropertyOptional({
+    description: 'Mentor profile ID for navigation to public profile'
+  })
+  @Expose()
+  mentorProfileId?: string
+
+  @ApiPropertyOptional({ enum: ['active', 'ended', 'cancelled'] })
+  @Expose()
+  mentorshipStatus?: string
 
   @ApiProperty()
   @Expose()

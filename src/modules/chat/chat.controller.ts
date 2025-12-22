@@ -29,6 +29,7 @@ import {
   MessageResponseDto,
   SendMessageDto
 } from './dto/message.dto'
+import { ChatGateway } from './gateways/chat.gateway'
 import { ChatRedisService } from './services/chat-redis.service'
 import { ChatService } from './services/chat.service'
 
@@ -39,7 +40,8 @@ import { ChatService } from './services/chat.service'
 export class ChatController {
   constructor(
     private readonly chatService: ChatService,
-    private readonly redisService: ChatRedisService
+    private readonly redisService: ChatRedisService,
+    private readonly chatGateway: ChatGateway
   ) {}
 
   @Get('conversations')
@@ -54,6 +56,10 @@ export class ChatController {
       const dto = plainToInstance(ConversationResponseDto, conv, {
         excludeExtraneousValues: true
       })
+
+      if (conv.mentorship) {
+        dto.mentorshipStatus = conv.mentorship.status
+      }
 
       // Add role information to participants
       if (dto.participant1 && conv.mentorship) {
@@ -85,6 +91,10 @@ export class ChatController {
     const dto = plainToInstance(ConversationResponseDto, conversation, {
       excludeExtraneousValues: true
     })
+
+    if (conversation.mentorship) {
+      dto.mentorshipStatus = conversation.mentorship.status
+    }
 
     // Add role information to participants
     if (dto.participant1 && conversation.mentorship) {
@@ -146,7 +156,9 @@ export class ChatController {
         return dto
       }),
       hasMore,
-      nextCursor
+      nextCursor,
+      mentorshipStatus: mentorship?.status,
+      mentorshipId: mentorship?.id
     }
   }
 
@@ -180,6 +192,29 @@ export class ChatController {
         mentorship.mentorId === responseDto.parentMessage.sender.id
           ? 'mentor'
           : 'student'
+    }
+
+    // Emit real-time new message event to conversation room
+    this.chatGateway.server
+      .to(`conversation:${conversationId}`)
+      .emit('message:new', responseDto)
+
+    // Increment unread for other participant
+    const otherUserId = await this.chatService.getOtherParticipantId(
+      conversationId,
+      user.id
+    )
+
+    if (otherUserId) {
+      const unreadCount = await this.redisService.incrementUnreadCount(
+        conversationId,
+        otherUserId
+      )
+
+      this.chatGateway.server.to(`user:${otherUserId}`).emit('conversation:unread', {
+        conversationId,
+        count: unreadCount
+      })
     }
 
     return responseDto
@@ -217,6 +252,11 @@ export class ChatController {
           : 'student'
     }
 
+    // Emit real-time edit event to conversation room
+    this.chatGateway.server
+      .to(`conversation:${message.conversationId}`)
+      .emit('message:edited', responseDto)
+
     return responseDto
   }
 
@@ -249,6 +289,11 @@ export class ChatController {
           ? 'mentor'
           : 'student'
     }
+
+    // Emit real-time delete event to conversation room
+    this.chatGateway.server
+      .to(`conversation:${message.conversationId}`)
+      .emit('message:deleted', responseDto)
 
     return responseDto
   }
