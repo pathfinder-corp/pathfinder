@@ -6,6 +6,7 @@ import {
   NotFoundException
 } from '@nestjs/common'
 import { InjectRepository } from '@nestjs/typeorm'
+import { ConfigService } from '@nestjs/config'
 import { Repository } from 'typeorm'
 
 import { MentorProfilesService } from '../../mentor-profiles/mentor-profiles.service'
@@ -18,10 +19,13 @@ import {
 } from '../dto/message.dto'
 import { Conversation } from '../entities/conversation.entity'
 import { Message, MessageType } from '../entities/message.entity'
+import { ImageKitService } from '../../../common/services/imagekit.service'
 
 @Injectable()
 export class ChatService {
   private readonly logger = new Logger(ChatService.name)
+  private readonly uploadMaxFileSizeBytes: number
+  private readonly uploadAllowedMimeTypes: string[]
 
   constructor(
     @InjectRepository(Conversation)
@@ -29,8 +33,17 @@ export class ChatService {
     @InjectRepository(Message)
     private readonly messageRepository: Repository<Message>,
     private readonly mentorshipsService: MentorshipsService,
-    private readonly mentorProfilesService: MentorProfilesService
-  ) {}
+    private readonly mentorProfilesService: MentorProfilesService,
+    private readonly imagekitService: ImageKitService,
+    private readonly configService: ConfigService
+  ) {
+    this.uploadMaxFileSizeBytes =
+      this.configService.get<number>('upload.maxFileSizeBytes') ||
+      5 * 1024 * 1024
+
+    this.uploadAllowedMimeTypes =
+      this.configService.get<string[]>('upload.allowedMimeTypes') || []
+  }
 
   async getOrCreateConversation(mentorshipId: string): Promise<Conversation> {
     const mentorship = await this.mentorshipsService.findOne(mentorshipId)
@@ -352,6 +365,129 @@ export class ChatService {
       message: savedMessage!,
       mentorship
     }
+  }
+
+  /**
+   * Upload attachment (image/file) as a chat message
+   */
+  async uploadAttachmentMessage(
+    conversationId: string,
+    senderId: string,
+    file: Express.Multer.File,
+    caption?: string
+  ): Promise<{ message: Message; mentorship: Mentorship }> {
+    const conversation = await this.getConversationById(conversationId)
+
+    if (
+      conversation.participant1Id !== senderId &&
+      conversation.participant2Id !== senderId
+    ) {
+      throw new ForbiddenException('Not a participant of this conversation')
+    }
+
+    const mentorship = await this.mentorshipsService.findOne(
+      conversation.mentorshipId
+    )
+    if (!mentorship) {
+      throw new NotFoundException(
+        `Mentorship ${conversation.mentorshipId} not found for conversation ${conversationId}`
+      )
+    }
+
+    if (mentorship.status !== MentorshipStatus.ACTIVE) {
+      throw new BadRequestException(
+        'Cannot send message to inactive mentorship'
+      )
+    }
+
+    this.validateAttachmentFile(file)
+
+    if (!this.imagekitService.isEnabled()) {
+      throw new BadRequestException(
+        'Attachment upload service is not available. Please contact administrator.'
+      )
+    }
+
+    const fileExtension = this.getFileExtension(file.mimetype)
+    const storedFilename = `${conversationId}-${Date.now()}${fileExtension}`
+
+    const result = await this.imagekitService.upload(file.buffer, storedFilename, {
+      folder: `/chat/${conversationId}`,
+      tags: ['chat', conversationId]
+    })
+
+    const isImage = file.mimetype.startsWith('image/')
+
+    const message = this.messageRepository.create({
+      conversationId,
+      senderId,
+      content: caption || file.originalname,
+      type: isImage ? MessageType.IMAGE : MessageType.FILE,
+      attachmentUrl: result.url,
+      attachmentThumbnailUrl: isImage
+        ? this.imagekitService.getThumbnailUrl(result.filePath)
+        : undefined,
+      attachmentFileId: result.fileId,
+      attachmentFileName: file.originalname,
+      attachmentMimeType: file.mimetype,
+      attachmentSize: file.size
+    })
+
+    await this.messageRepository.save(message)
+
+    conversation.lastMessageAt = new Date()
+    await this.conversationRepository.save(conversation)
+
+    const savedMessage = await this.messageRepository.findOne({
+      where: { id: message.id },
+      relations: ['sender', 'parentMessage', 'parentMessage.sender']
+    })
+
+    this.logger.log(
+      `Attachment message ${message.id} sent in conversation ${conversationId}`
+    )
+
+    return {
+      message: savedMessage!,
+      mentorship
+    }
+  }
+
+  private validateAttachmentFile(file: Express.Multer.File): void {
+    if (!file) {
+      throw new BadRequestException('File is required')
+    }
+
+    if (file.size <= 0) {
+      throw new BadRequestException('File is empty')
+    }
+
+    if (file.size > this.uploadMaxFileSizeBytes) {
+      throw new BadRequestException(
+        `File size exceeds maximum allowed size of ${this.uploadMaxFileSizeBytes} bytes`
+      )
+    }
+
+    if (
+      this.uploadAllowedMimeTypes.length > 0 &&
+      !this.uploadAllowedMimeTypes.includes(file.mimetype)
+    ) {
+      throw new BadRequestException(
+        `File type ${file.mimetype} is not allowed`
+      )
+    }
+  }
+
+  private getFileExtension(mimeType: string): string {
+    const map: Record<string, string> = {
+      'image/jpeg': '.jpg',
+      'image/png': '.png',
+      'image/gif': '.gif',
+      'image/webp': '.webp',
+      'application/pdf': '.pdf'
+    }
+
+    return map[mimeType] || ''
   }
 
   async getMessages(

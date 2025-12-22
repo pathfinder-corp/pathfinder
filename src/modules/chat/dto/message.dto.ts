@@ -99,6 +99,36 @@ export class MessageResponseDto {
   @Expose()
   @Type(() => Date)
   updatedAt: Date
+
+  @ApiPropertyOptional({
+    description: 'URL of attachment (image or file) if this is an attachment message'
+  })
+  @Expose()
+  attachmentUrl?: string
+
+  @ApiPropertyOptional({
+    description: 'Thumbnail URL for image attachments'
+  })
+  @Expose()
+  attachmentThumbnailUrl?: string
+
+  @ApiPropertyOptional({
+    description: 'Original attachment file name'
+  })
+  @Expose()
+  attachmentFileName?: string
+
+  @ApiPropertyOptional({
+    description: 'Attachment MIME type'
+  })
+  @Expose()
+  attachmentMimeType?: string
+
+  @ApiPropertyOptional({
+    description: 'Attachment size in bytes'
+  })
+  @Expose()
+  attachmentSize?: number
 }
 
 export class SendMessageDto {

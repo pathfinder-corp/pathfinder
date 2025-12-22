@@ -8,10 +8,15 @@ import {
   Post,
   Put,
   Query,
-  UseGuards
+  UseGuards,
+  UseInterceptors,
+  UploadedFile
 } from '@nestjs/common'
+import { FileInterceptor } from '@nestjs/platform-express'
 import {
   ApiBearerAuth,
+  ApiBody,
+  ApiConsumes,
   ApiOperation,
   ApiResponse,
   ApiTags
@@ -222,6 +227,81 @@ export class ChatController {
       .emit('message:new', responseDto)
 
     // Increment unread for other participant
+    const otherUserId = await this.chatService.getOtherParticipantId(
+      conversationId,
+      user.id
+    )
+
+    if (otherUserId) {
+      const unreadCount = await this.redisService.incrementUnreadCount(
+        conversationId,
+        otherUserId
+      )
+
+      this.chatGateway.server.to(`user:${otherUserId}`).emit('conversation:unread', {
+        conversationId,
+        count: unreadCount
+      })
+    }
+
+    return responseDto
+  }
+
+  @Post('conversations/:conversationId/messages/attachment')
+  @ApiOperation({ summary: 'Upload an attachment (image/file) as a message' })
+  @ApiConsumes('multipart/form-data')
+  @ApiBody({
+    schema: {
+      type: 'object',
+      properties: {
+        file: {
+          type: 'string',
+          format: 'binary'
+        },
+        caption: {
+          type: 'string',
+          maxLength: 10000
+        }
+      },
+      required: ['file']
+    }
+  })
+  @ApiResponse({ status: 201, type: MessageResponseDto })
+  @UseInterceptors(FileInterceptor('file'))
+  async uploadAttachment(
+    @CurrentUser() user: User,
+    @Param('conversationId', ParseUUIDPipe) conversationId: string,
+    @UploadedFile() file: Express.Multer.File,
+    @Body('caption') caption?: string
+  ): Promise<MessageResponseDto> {
+    const { message, mentorship } =
+      await this.chatService.uploadAttachmentMessage(
+        conversationId,
+        user.id,
+        file,
+        caption
+      )
+
+    const responseDto = plainToInstance(MessageResponseDto, message, {
+      excludeExtraneousValues: true
+    })
+
+    if (responseDto.sender && mentorship) {
+      responseDto.sender.role =
+        mentorship.mentorId === responseDto.sender.id ? 'mentor' : 'student'
+    }
+
+    if (responseDto.parentMessage?.sender && mentorship) {
+      responseDto.parentMessage.sender.role =
+        mentorship.mentorId === responseDto.parentMessage.sender.id
+          ? 'mentor'
+          : 'student'
+    }
+
+    this.chatGateway.server
+      .to(`conversation:${conversationId}`)
+      .emit('message:new', responseDto)
+
     const otherUserId = await this.chatService.getOtherParticipantId(
       conversationId,
       user.id

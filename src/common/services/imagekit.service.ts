@@ -88,7 +88,6 @@ export class ImageKitService implements OnModuleInit {
         fileName,
         folder,
         tags: options?.tags,
-        customMetadata: options?.customMetadata,
         useUniqueFileName: true
       })
 
@@ -106,7 +105,17 @@ export class ImageKitService implements OnModuleInit {
         height: response.height
       }
     } catch (error) {
-      this.logger.error(`Failed to upload file to ImageKit: ${error}`)
+      const message =
+        error instanceof Error
+          ? error.message
+          : typeof error === 'string'
+            ? error
+            : JSON.stringify(error)
+
+      this.logger.error(
+        `Failed to upload file to ImageKit: ${message}`,
+        error instanceof Error ? error.stack : undefined
+      )
       throw error
     }
   }

@@ -14,7 +14,9 @@ import { Conversation } from './conversation.entity'
 
 export enum MessageType {
   TEXT = 'text',
-  SYSTEM = 'system'
+  SYSTEM = 'system',
+  IMAGE = 'image',
+  FILE = 'file'
 }
 
 @Entity('messages')
@@ -72,6 +74,24 @@ export class Message {
 
   @Column({ name: 'read_at', type: 'timestamptz', nullable: true })
   readAt?: Date
+
+  @Column({ name: 'attachment_url', type: 'text', nullable: true })
+  attachmentUrl?: string
+
+  @Column({ name: 'attachment_thumbnail_url', type: 'text', nullable: true })
+  attachmentThumbnailUrl?: string
+
+  @Column({ name: 'attachment_file_id', type: 'text', nullable: true })
+  attachmentFileId?: string
+
+  @Column({ name: 'attachment_file_name', type: 'text', nullable: true })
+  attachmentFileName?: string
+
+  @Column({ name: 'attachment_mime_type', type: 'text', nullable: true })
+  attachmentMimeType?: string
+
+  @Column({ name: 'attachment_size', type: 'bigint', nullable: true })
+  attachmentSize?: number
 
   @CreateDateColumn({ name: 'created_at', type: 'timestamptz' })
   createdAt: Date
