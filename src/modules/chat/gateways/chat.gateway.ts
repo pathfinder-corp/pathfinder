@@ -110,6 +110,19 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
     await client.join(`conversation:${conversationId}`)
 
+    const conversation = await this.chatService.getConversationById(conversationId)
+    
+    if (conversation.mentorship) {
+      client.emit('conversation:mentorship', {
+        conversationId,
+        mentorshipId: conversation.mentorship.id,
+        status: conversation.mentorship.status,
+        endReason: conversation.mentorship.status !== 'active' ? conversation.mentorship.endReason : undefined,
+        endedBy: conversation.mentorship.status !== 'active' ? conversation.mentorship.endedBy : undefined,
+        endedAt: conversation.mentorship.status !== 'active' ? conversation.mentorship.endedAt : undefined
+      })
+    }
+
     // Get online status of other participant
     const otherUserId = await this.chatService.getOtherParticipantId(
       conversationId,

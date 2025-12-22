@@ -59,6 +59,13 @@ export class ChatController {
 
       if (conv.mentorship) {
         dto.mentorshipStatus = conv.mentorship.status
+        
+        // Populate ended mentorship information
+        if (conv.mentorship.status !== 'active') {
+          dto.mentorshipEndReason = conv.mentorship.endReason
+          dto.mentorshipEndedBy = conv.mentorship.endedBy
+          dto.mentorshipEndedAt = conv.mentorship.endedAt
+        }
       }
 
       // Add role information to participants
@@ -85,8 +92,13 @@ export class ChatController {
   async getConversationByMentorship(
     @Param('mentorshipId', ParseUUIDPipe) mentorshipId: string
   ): Promise<ConversationResponseDto> {
-    const conversation =
-      await this.chatService.getOrCreateConversation(mentorshipId)
+    // Try to get existing conversation first (works even if mentorship ended)
+    let conversation = await this.chatService.getConversationByMentorshipId(mentorshipId)
+    
+    // If not found, try to create (only works if mentorship is active)
+    if (!conversation) {
+      conversation = await this.chatService.getOrCreateConversation(mentorshipId)
+    }
 
     const dto = plainToInstance(ConversationResponseDto, conversation, {
       excludeExtraneousValues: true
@@ -94,6 +106,13 @@ export class ChatController {
 
     if (conversation.mentorship) {
       dto.mentorshipStatus = conversation.mentorship.status
+      
+      // Populate ended mentorship information
+      if (conversation.mentorship.status !== 'active') {
+        dto.mentorshipEndReason = conversation.mentorship.endReason
+        dto.mentorshipEndedBy = conversation.mentorship.endedBy
+        dto.mentorshipEndedAt = conversation.mentorship.endedAt
+      }
     }
 
     // Add role information to participants
@@ -158,7 +177,10 @@ export class ChatController {
       hasMore,
       nextCursor,
       mentorshipStatus: mentorship?.status,
-      mentorshipId: mentorship?.id
+      mentorshipId: mentorship?.id,
+      mentorshipEndReason: mentorship?.status !== 'active' ? mentorship?.endReason : undefined,
+      mentorshipEndedBy: mentorship?.status !== 'active' ? mentorship?.endedBy : undefined,
+      mentorshipEndedAt: mentorship?.status !== 'active' ? mentorship?.endedAt : undefined
     }
   }
 

@@ -152,6 +152,22 @@ export class MessageListResponseDto {
 
   @ApiPropertyOptional()
   mentorshipId?: string
+
+  @ApiPropertyOptional({
+    description: 'Reason why mentorship ended'
+  })
+  mentorshipEndReason?: string
+
+  @ApiPropertyOptional({
+    description: 'User ID who ended the mentorship'
+  })
+  mentorshipEndedBy?: string
+
+  @ApiPropertyOptional({
+    description: 'Date when mentorship ended'
+  })
+  @Type(() => Date)
+  mentorshipEndedAt?: Date
 }
 
 export class ConversationResponseDto {
@@ -172,6 +188,25 @@ export class ConversationResponseDto {
   @ApiPropertyOptional({ enum: ['active', 'ended', 'cancelled'] })
   @Expose()
   mentorshipStatus?: string
+
+  @ApiPropertyOptional({
+    description: 'Reason why mentorship ended'
+  })
+  @Expose()
+  mentorshipEndReason?: string
+
+  @ApiPropertyOptional({
+    description: 'User ID who ended the mentorship'
+  })
+  @Expose()
+  mentorshipEndedBy?: string
+
+  @ApiPropertyOptional({
+    description: 'Date when mentorship ended'
+  })
+  @Expose()
+  @Type(() => Date)
+  mentorshipEndedAt?: Date
 
   @ApiProperty()
   @Expose()

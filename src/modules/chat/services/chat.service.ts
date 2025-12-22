@@ -47,6 +47,7 @@ export class ChatService {
     })
 
     if (!conversation) {
+      // Check if there's an existing conversation between same participants
       const existingConversation = await this.conversationRepository
         .createQueryBuilder('conversation')
         .leftJoinAndSelect('conversation.mentorship', 'mentorship')
@@ -60,64 +61,10 @@ export class ChatService {
         .getOne()
 
       if (existingConversation) {
-        // Check if the existing conversation's mentorshipId is different
-        // If same, no need to update
-        if (existingConversation.mentorshipId !== mentorshipId) {
-          // Check if the new mentorship already has a conversation
-          const existingMentorshipConversation = await this.conversationRepository.findOne({
-            where: { mentorshipId }
-          })
-          
-          if (existingMentorshipConversation && existingMentorshipConversation.id !== existingConversation.id) {
-            // The new mentorship already has a different conversation
-            // This shouldn't happen in normal flow, but use the existing one
-            this.logger.warn(
-              `Mentorship ${mentorshipId} already has conversation ${existingMentorshipConversation.id}, but found existing conversation ${existingConversation.id} between same participants. Using existing mentorship conversation.`
-            )
-            conversation = existingMentorshipConversation
-          } else {
-            // Update mentorshipId to the new active mentorship
-            // Use update query to avoid unique constraint issues
-            const oldMentorshipId = existingConversation.mentorshipId
-            await this.conversationRepository.update(
-              { id: existingConversation.id },
-              { mentorshipId }
-            )
-            
-            // Verify the update was successful
-            const updatedConversation = await this.conversationRepository.findOne({
-              where: { id: existingConversation.id }
-            })
-            
-            if (!updatedConversation || updatedConversation.mentorshipId !== mentorshipId) {
-              this.logger.error(
-                `Failed to update conversation ${existingConversation.id} mentorshipId from ${oldMentorshipId} to ${mentorshipId}`
-              )
-              throw new BadRequestException(
-                `Failed to update conversation mentorshipId. Expected ${mentorshipId}, got ${updatedConversation?.mentorshipId}`
-              )
-            }
-            
-            // Reload conversation with updated mentorship relation
-            conversation = await this.conversationRepository.findOne({
-              where: { id: existingConversation.id },
-              relations: ['mentorship', 'participant1', 'participant2']
-            })
-            
-            if (!conversation) {
-              throw new NotFoundException(
-                `Failed to reload conversation ${existingConversation.id} after updating mentorshipId`
-              )
-            }
-            
-            // Ensure mentorship relation is refreshed by manually setting it
-            conversation.mentorship = mentorship
-            
-            this.logger.log(
-              `Reused conversation ${conversation.id} for new mentorship ${mentorshipId} (was ${oldMentorshipId})`
-            )
-          }
-        } else {
+        // Check if the existing conversation's mentorship is still active
+        // Only reuse conversation if the old mentorship is still active
+        // If old mentorship ended, create new conversation for new mentorship
+        if (existingConversation.mentorshipId === mentorshipId) {
           // Already linked to this mentorship, just reload with relations
           conversation = await this.conversationRepository.findOne({
             where: { id: existingConversation.id },
@@ -132,9 +79,69 @@ export class ChatService {
           
           // Ensure mentorship relation is refreshed
           conversation.mentorship = mentorship
+        } else if (existingConversation.mentorship?.status === MentorshipStatus.ACTIVE) {
+          // Old mentorship is still active, this shouldn't happen normally
+          // But if it does, we should not reuse to avoid conflicts
+          this.logger.warn(
+            `Found active conversation ${existingConversation.id} with different mentorship ${existingConversation.mentorshipId}. Creating new conversation for mentorship ${mentorshipId}`
+          )
+          
+          // Create new conversation instead of reusing
+          conversation = this.conversationRepository.create({
+            mentorshipId,
+            participant1Id: mentorship.mentorId,
+            participant2Id: mentorship.studentId
+          })
+
+          conversation = await this.conversationRepository.save(conversation)
+          
+          // Reload with relations
+          conversation = await this.conversationRepository.findOne({
+            where: { id: conversation.id },
+            relations: ['mentorship', 'participant1', 'participant2']
+          })
+          
+          if (!conversation) {
+            throw new NotFoundException(
+              `Failed to reload newly created conversation`
+            )
+          }
+          
+          this.logger.log(
+            `Created new conversation ${conversation.id} for mentorship ${mentorshipId} (old conversation ${existingConversation.id} has ended mentorship)`
+          )
+        } else {
+          // Old mentorship has ended, create new conversation for new mentorship
+          this.logger.log(
+            `Existing conversation ${existingConversation.id} has ended mentorship ${existingConversation.mentorshipId}. Creating new conversation for active mentorship ${mentorshipId}`
+          )
+          
+          conversation = this.conversationRepository.create({
+            mentorshipId,
+            participant1Id: mentorship.mentorId,
+            participant2Id: mentorship.studentId
+          })
+
+          conversation = await this.conversationRepository.save(conversation)
+          
+          // Reload with relations
+          conversation = await this.conversationRepository.findOne({
+            where: { id: conversation.id },
+            relations: ['mentorship', 'participant1', 'participant2']
+          })
+          
+          if (!conversation) {
+            throw new NotFoundException(
+              `Failed to reload newly created conversation`
+            )
+          }
+          
+          this.logger.log(
+            `Created new conversation ${conversation.id} for mentorship ${mentorshipId}`
+          )
         }
       } else {
-        // Create new conversation
+        // No existing conversation, create new one
         conversation = this.conversationRepository.create({
           mentorshipId,
           participant1Id: mentorship.mentorId,
