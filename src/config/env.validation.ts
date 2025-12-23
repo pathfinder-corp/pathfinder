@@ -63,11 +63,8 @@ export const envValidationSchema = Joi.object({
     .default('buy now,click here,limited offer'),
 
   GENAI_API_KEY: Joi.string().required(),
-  GENAI_MODEL: Joi.string().default('gemini-2.5-flash'),
-  GENAI_TEMPERATURE: Joi.number().min(0).max(2).default(0.4),
-  GENAI_TOP_P: Joi.number().min(0).max(1).default(0.95),
-  GENAI_TOP_K: Joi.number().min(1).max(200).default(32),
-  GENAI_MAX_OUTPUT_TOKENS: Joi.number().min(64).max(65536).default(32768),
+  GENAI_MODEL: Joi.string().default('gemini-3-flash-preview'),
+  GENAI_MAX_OUTPUT_TOKENS: Joi.number().min(64).max(65536).default(65536),
 
   // Mentorship configuration
   MENTORSHIP_REQUEST_EXPIRY_HOURS: Joi.number().min(1).default(72),

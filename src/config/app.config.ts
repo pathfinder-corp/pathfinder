@@ -11,11 +11,6 @@ const parseIntSafe = (value: string | undefined, defaultValue: number) => {
   return Number.isNaN(parsed) ? defaultValue : parsed
 }
 
-const parseNumberSafe = (value: string | undefined, defaultValue: number) => {
-  const parsed = parseFloat(value ?? '')
-  return Number.isNaN(parsed) ? defaultValue : parsed
-}
-
 const resolveCorsOrigins = () => {
   const rawOrigins = process.env.CORS_ORIGINS
 
@@ -85,11 +80,8 @@ export default () => {
     },
     genai: {
       apiKey: process.env.GENAI_API_KEY ?? '',
-      model: process.env.GENAI_MODEL ?? 'gemini-2.5-flash',
-      temperature: parseNumberSafe(process.env.GENAI_TEMPERATURE, 0.4),
-      topP: parseNumberSafe(process.env.GENAI_TOP_P, 0.95),
-      topK: parseIntSafe(process.env.GENAI_TOP_K, 32),
-      maxOutputTokens: parseIntSafe(process.env.GENAI_MAX_OUTPUT_TOKENS, 32768)
+      model: process.env.GENAI_MODEL ?? 'gemini-3-flash-preview',
+      maxOutputTokens: parseIntSafe(process.env.GENAI_MAX_OUTPUT_TOKENS, 65536)
     },
     documentation: {
       enabled: parseBoolean(process.env.ENABLE_SWAGGER, true),

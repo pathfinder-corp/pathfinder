@@ -21,7 +21,10 @@ import {
 import { ApplicationStatus } from '../mentor-applications/entities/application-status.enum'
 import { MentorApplication } from '../mentor-applications/entities/mentor-application.entity'
 import { DocumentUploadService } from '../mentor-applications/services/document-upload.service'
-import { Mentorship, MentorshipStatus } from '../mentorships/entities/mentorship.entity'
+import {
+  Mentorship,
+  MentorshipStatus
+} from '../mentorships/entities/mentorship.entity'
 import { UserRole } from '../users/entities/user.entity'
 import { UsersService } from '../users/users.service'
 import { SearchMentorsQueryDto } from './dto/search-mentors.dto'

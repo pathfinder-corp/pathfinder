@@ -119,10 +119,7 @@ export class UsersService {
     return users
   }
 
-  async updateAvatar(
-    userId: string,
-    file: Express.Multer.File
-  ): Promise<User> {
+  async updateAvatar(userId: string, file: Express.Multer.File): Promise<User> {
     const user = await this.findOne(userId)
 
     if (!file) {

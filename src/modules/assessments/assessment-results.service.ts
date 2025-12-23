@@ -74,14 +74,14 @@ export class AssessmentResultsService {
 
     this.client = new GoogleGenAI({ apiKey })
     this.modelName =
-      this.configService.get<string>('genai.model') ?? 'gemini-2.5-flash'
+      this.configService.get<string>('genai.model') ?? 'gemini-3-flash-preview'
 
     this.generationDefaults = {
-      temperature: this.configService.get<number>('genai.temperature') ?? 0.4,
-      topP: this.configService.get<number>('genai.topP') ?? 0.95,
-      topK: this.configService.get<number>('genai.topK') ?? 32,
+      temperature: 0.5,
+      topP: 0.9,
+      topK: 64,
       maxOutputTokens:
-        this.configService.get<number>('genai.maxOutputTokens') ?? 32768
+        this.configService.get<number>('genai.maxOutputTokens') ?? 65536
     }
   }
 

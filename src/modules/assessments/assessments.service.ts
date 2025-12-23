@@ -91,14 +91,14 @@ export class AssessmentsService {
 
     this.client = new GoogleGenAI({ apiKey })
     this.modelName =
-      this.configService.get<string>('genai.model') ?? 'gemini-2.5-flash'
+      this.configService.get<string>('genai.model') ?? 'gemini-3-flash-preview'
 
     this.generationDefaults = {
-      temperature: this.configService.get<number>('genai.temperature') ?? 0.4,
-      topP: this.configService.get<number>('genai.topP') ?? 0.95,
-      topK: this.configService.get<number>('genai.topK') ?? 32,
+      temperature: 0.5,
+      topP: 0.9,
+      topK: 64,
       maxOutputTokens:
-        this.configService.get<number>('genai.maxOutputTokens') ?? 32768
+        this.configService.get<number>('genai.maxOutputTokens') ?? 65536
     }
   }
 
@@ -534,7 +534,7 @@ Ensure all strings use double quotes and the JSON is strictly valid.`
       .replace(/^\d+\.\s*/, '') // Remove "1. ", "2. ", etc.
       .replace(/^\d+\)\s*/, '') // Remove "1) ", "2) ", etc.
       .replace(/^[ivxlcdm]+\.\s*/i, '') // Remove roman numerals "i. ", "ii. ", etc.
-      .replace(/^[•\-\*]\s*/, '') // Remove bullet points
+      .replace(/^[•\-*]\s*/, '') // Remove bullet points
       .trim()
   }
 

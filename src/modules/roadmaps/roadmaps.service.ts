@@ -51,14 +51,10 @@ type RoadmapContentPlain = {
   milestones?: Roadmap['milestones']
 }
 
-const SYSTEM_PROMPT = `You are an expert academic and career advisor. Build concise yet actionable roadmaps that combine skill acquisition, experiential learning, and milestone tracking.
+const SYSTEM_PROMPT = `You are an expert academic and career advisor. Build comprehensive, actionable roadmaps that combine skill acquisition, experiential learning, and milestone tracking.
 
 Rules:
 - Always respond with valid JSON that matches the provided schema.
-- Provide realistic time estimates and hands-on activities.
-- Reference reputable, preferably free or low-cost resources when possible.
-- Align steps to progressively develop mastery toward the stated goal.
-- Highlight checkpoints that confirm the learner is ready to advance.
 - Decline any request that is not focused on educational growth or that touches sensitive or harmful topics (violence, weapons, self-harm, adult content, hate, or illegal activities). Respond with: "I'm sorry, but I can only help with educational learning plans."
 - Never produce content that facilitates dangerous, hateful, or illegal activities.`
 
@@ -75,6 +71,7 @@ export class RoadmapsService {
   private readonly client: GoogleGenAI
   private readonly modelName: string
   private readonly generationDefaults: GenerationSettings
+  private readonly insightGenerationDefaults: GenerationSettings
 
   constructor(
     private readonly configService: ConfigService,
@@ -94,14 +91,21 @@ export class RoadmapsService {
 
     this.client = new GoogleGenAI({ apiKey })
     this.modelName =
-      this.configService.get<string>('genai.model') ?? 'gemini-2.5-flash'
+      this.configService.get<string>('genai.model') ?? 'gemini-3-flash-preview'
 
     this.generationDefaults = {
-      temperature: this.configService.get<number>('genai.temperature') ?? 0.4,
-      topP: this.configService.get<number>('genai.topP') ?? 0.95,
-      topK: this.configService.get<number>('genai.topK') ?? 32,
+      temperature: 0.5,
+      topP: 0.9,
+      topK: 64,
       maxOutputTokens:
-        this.configService.get<number>('genai.maxOutputTokens') ?? 32768
+        this.configService.get<number>('genai.maxOutputTokens') ?? 65536
+    }
+
+    this.insightGenerationDefaults = {
+      temperature: 1,
+      topP: 0.95,
+      maxOutputTokens:
+        this.configService.get<number>('genai.maxOutputTokens') ?? 65536
     }
   }
 
@@ -317,7 +321,7 @@ export class RoadmapsService {
         model: this.modelName,
         contents: prompt,
         config: {
-          ...this.generationDefaults,
+          ...this.insightGenerationDefaults,
           responseMimeType: 'text/plain',
           systemInstruction: INSIGHT_SYSTEM_PROMPT
         }
@@ -582,10 +586,22 @@ Context:
 ${context.map((line) => `- ${line}`).join('\n')}
 
 Instructions:
-- Break the roadmap into sequential phases. Each phase must include at least two detailed steps.
-- Each step should outline concrete activities, suggested deliverables, and any notable resources.
-- Provide a summary that includes recommended duration and success tips tailored to the user.
-- Include milestone checkpoints that demonstrate capability progression.
+- Break the roadmap into 4-7 sequential phases (adjust based on topic complexity and timeframe).
+- Each phase must include 4-6 detailed steps that build upon each other progressively.
+- Structure phases from foundational concepts to advanced mastery, ensuring logical skill progression.
+- For each step:
+  * Write a clear, specific title that indicates what will be learned
+  * Provide a detailed description (2-4 sentences) explaining the learning objectives
+  * Include 3-5 concrete key activities the learner should complete to make learning actionable and measurable
+  * Add 2-3 diverse reputable resources (courses, books, documentation, tutorials, projects, articles, videos, interactive tools) when applicable
+  * Specify realistic estimated duration based on the learning pace
+  * Ensure each step has clear, actionable deliverables
+- Provide a comprehensive summary with:
+  * Recommended study cadence (e.g., "2-3 hours daily" or "10 hours per week")
+  * Total recommended duration for completing the entire roadmap
+  * 4-6 success tips tailored to the user's experience level and learning pace
+  * Additional notes about prerequisites, challenges, or career outcomes
+- Include 4-8 milestone checkpoints spread across the roadmap that demonstrate capability progression.
 
 Output JSON schema:
 {
