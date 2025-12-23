@@ -169,7 +169,10 @@ export class AdminUsersService {
     })
   }
 
-  async unbanUser(id: string, currentUser: User): Promise<AdminUserResponseDto> {
+  async unbanUser(
+    id: string,
+    currentUser: User
+  ): Promise<AdminUserResponseDto> {
     const user = await this.usersRepository.findOne({ where: { id } })
 
     if (!user) {

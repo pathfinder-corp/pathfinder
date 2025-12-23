@@ -1,8 +1,6 @@
 import { MigrationInterface, QueryRunner } from 'typeorm'
 
-export class AddImageKitColumnsToDocuments1734800000000
-  implements MigrationInterface
-{
+export class AddImageKitColumnsToDocuments1734800000000 implements MigrationInterface {
   name = 'AddImageKitColumnsToDocuments1734800000000'
 
   public async up(queryRunner: QueryRunner): Promise<void> {
@@ -49,4 +47,3 @@ export class AddImageKitColumnsToDocuments1734800000000
     // Note: We don't restore NOT NULL on file_path as it would break existing data
   }
 }
-

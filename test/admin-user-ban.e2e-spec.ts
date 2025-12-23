@@ -4,7 +4,11 @@ import * as request from 'supertest'
 import { Repository } from 'typeorm'
 
 import { AppModule } from '../src/app.module'
-import { User, UserRole, UserStatus } from '../src/modules/users/entities/user.entity'
+import {
+  User,
+  UserRole,
+  UserStatus
+} from '../src/modules/users/entities/user.entity'
 
 describe('Admin User Ban (e2e)', () => {
   let app: INestApplication
@@ -72,14 +76,12 @@ describe('Admin User Ban (e2e)', () => {
     })
 
     // Create another admin user
-    await request(app.getHttpServer())
-      .post('/auth/register')
-      .send({
-        email: 'admin2@test.com',
-        password: 'Admin123!',
-        firstName: 'Admin',
-        lastName: 'Two'
-      })
+    await request(app.getHttpServer()).post('/auth/register').send({
+      email: 'admin2@test.com',
+      password: 'Admin123!',
+      firstName: 'Admin',
+      lastName: 'Two'
+    })
 
     anotherAdminUser = await usersRepository.findOne({
       where: { email: 'admin2@test.com' }
@@ -244,14 +246,12 @@ describe('Admin User Ban (e2e)', () => {
 
     it('should require admin role', async () => {
       // Login as another student
-      await request(app.getHttpServer())
-        .post('/auth/register')
-        .send({
-          email: 'student2@test.com',
-          password: 'Student123!',
-          firstName: 'Student',
-          lastName: 'Two'
-        })
+      await request(app.getHttpServer()).post('/auth/register').send({
+        email: 'student2@test.com',
+        password: 'Student123!',
+        firstName: 'Student',
+        lastName: 'Two'
+      })
 
       const studentLoginResponse = await request(app.getHttpServer())
         .post('/auth/login')
@@ -332,4 +332,3 @@ describe('Admin User Ban (e2e)', () => {
     })
   })
 })
-

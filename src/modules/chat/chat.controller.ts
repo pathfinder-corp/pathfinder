@@ -64,7 +64,7 @@ export class ChatController {
 
       if (conv.mentorship) {
         dto.mentorshipStatus = conv.mentorship.status
-        
+
         // Populate ended mentorship information
         if (conv.mentorship.status !== 'active') {
           dto.mentorshipEndReason = conv.mentorship.endReason
@@ -98,11 +98,13 @@ export class ChatController {
     @Param('mentorshipId', ParseUUIDPipe) mentorshipId: string
   ): Promise<ConversationResponseDto> {
     // Try to get existing conversation first (works even if mentorship ended)
-    let conversation = await this.chatService.getConversationByMentorshipId(mentorshipId)
-    
+    let conversation =
+      await this.chatService.getConversationByMentorshipId(mentorshipId)
+
     // If not found, try to create (only works if mentorship is active)
     if (!conversation) {
-      conversation = await this.chatService.getOrCreateConversation(mentorshipId)
+      conversation =
+        await this.chatService.getOrCreateConversation(mentorshipId)
     }
 
     const dto = plainToInstance(ConversationResponseDto, conversation, {
@@ -111,7 +113,7 @@ export class ChatController {
 
     if (conversation.mentorship) {
       dto.mentorshipStatus = conversation.mentorship.status
-      
+
       // Populate ended mentorship information
       if (conversation.mentorship.status !== 'active') {
         dto.mentorshipEndReason = conversation.mentorship.endReason
@@ -183,9 +185,12 @@ export class ChatController {
       nextCursor,
       mentorshipStatus: mentorship?.status,
       mentorshipId: mentorship?.id,
-      mentorshipEndReason: mentorship?.status !== 'active' ? mentorship?.endReason : undefined,
-      mentorshipEndedBy: mentorship?.status !== 'active' ? mentorship?.endedBy : undefined,
-      mentorshipEndedAt: mentorship?.status !== 'active' ? mentorship?.endedAt : undefined
+      mentorshipEndReason:
+        mentorship?.status !== 'active' ? mentorship?.endReason : undefined,
+      mentorshipEndedBy:
+        mentorship?.status !== 'active' ? mentorship?.endedBy : undefined,
+      mentorshipEndedAt:
+        mentorship?.status !== 'active' ? mentorship?.endedAt : undefined
     }
   }
 
@@ -238,10 +243,12 @@ export class ChatController {
         otherUserId
       )
 
-      this.chatGateway.server.to(`user:${otherUserId}`).emit('conversation:unread', {
-        conversationId,
-        count: unreadCount
-      })
+      this.chatGateway.server
+        .to(`user:${otherUserId}`)
+        .emit('conversation:unread', {
+          conversationId,
+          count: unreadCount
+        })
     }
 
     return responseDto
@@ -313,10 +320,12 @@ export class ChatController {
         otherUserId
       )
 
-      this.chatGateway.server.to(`user:${otherUserId}`).emit('conversation:unread', {
-        conversationId,
-        count: unreadCount
-      })
+      this.chatGateway.server
+        .to(`user:${otherUserId}`)
+        .emit('conversation:unread', {
+          conversationId,
+          count: unreadCount
+        })
     }
 
     return responseDto

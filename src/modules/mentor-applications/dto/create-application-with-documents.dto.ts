@@ -70,8 +70,9 @@ export class DocumentMetadataDto {
   issuingOrganization?: string
 }
 
-
-function transformDocumentsMetadata(value: unknown): DocumentMetadataDto[] | undefined {
+function transformDocumentsMetadata(
+  value: unknown
+): DocumentMetadataDto[] | undefined {
   if (!value) return undefined
 
   let parsed: unknown[]
@@ -241,4 +242,3 @@ export class CreateApplicationWithDocumentsDto {
   @Type(() => DocumentMetadataDto)
   documentsMetadata?: DocumentMetadataDto[]
 }
-

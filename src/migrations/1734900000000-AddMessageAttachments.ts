@@ -1,8 +1,6 @@
 import { MigrationInterface, QueryRunner } from 'typeorm'
 
-export class AddMessageAttachments1734900000000
-  implements MigrationInterface
-{
+export class AddMessageAttachments1734900000000 implements MigrationInterface {
   name = 'AddMessageAttachments1734900000000'
 
   public async up(queryRunner: QueryRunner): Promise<void> {
@@ -69,5 +67,3 @@ export class AddMessageAttachments1734900000000
     `)
   }
 }
-
-

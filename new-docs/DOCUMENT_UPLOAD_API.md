@@ -7,6 +7,7 @@ Tính năng upload hình ảnh (chứng chỉ, giải thưởng, portfolio) cho 
 ## Features
 
 ### 1. **Upload Documents**
+
 - Hỗ trợ định dạng: JPG, PNG, GIF, WEBP, PDF
 - Kích thước tối đa: 5MB/file
 - Tối đa 10 documents/application
@@ -14,6 +15,7 @@ Tính năng upload hình ảnh (chứng chỉ, giải thưởng, portfolio) cho 
 - Chỉ cho phép upload khi application ở trạng thái: `pending`, `under_review`, `flagged`
 
 ### 2. **Document Types**
+
 - `certificate` - Chứng chỉ
 - `award` - Giải thưởng
 - `portfolio` - Portfolio/Dự án
@@ -21,6 +23,7 @@ Tính năng upload hình ảnh (chứng chỉ, giải thưởng, portfolio) cho 
 - `other` - Khác
 
 ### 3. **Verification Status**
+
 - `pending` - Chờ xác minh
 - `verified` - Đã xác minh
 - `rejected` - Bị từ chối
@@ -30,6 +33,7 @@ Tính năng upload hình ảnh (chứng chỉ, giải thưởng, portfolio) cho 
 ### User Endpoints
 
 #### 1. Upload Document
+
 ```http
 POST /api/mentor-applications/:id/documents
 Content-Type: multipart/form-data
@@ -37,6 +41,7 @@ Authorization: Bearer <token>
 ```
 
 **Request Body:**
+
 ```typescript
 {
   file: File,                    // Required: Image or PDF file
@@ -49,6 +54,7 @@ Authorization: Bearer <token>
 ```
 
 **Response:**
+
 ```typescript
 {
   id: string,
@@ -68,6 +74,7 @@ Authorization: Bearer <token>
 ```
 
 #### 2. Get All Documents for Application
+
 ```http
 GET /api/mentor-applications/:id/documents
 Authorization: Bearer <token>
@@ -76,12 +83,14 @@ Authorization: Bearer <token>
 **Response:** Array of `DocumentResponseDto`
 
 #### 3. Get Single Document
+
 ```http
 GET /api/mentor-applications/:applicationId/documents/:documentId
 Authorization: Bearer <token>
 ```
 
 #### 4. Download Document
+
 ```http
 GET /api/mentor-applications/:applicationId/documents/:documentId/download
 Authorization: Bearer <token>
@@ -90,6 +99,7 @@ Authorization: Bearer <token>
 **Response:** File download
 
 #### 5. Update Document Metadata
+
 ```http
 PATCH /api/mentor-applications/:applicationId/documents/:documentId
 Authorization: Bearer <token>
@@ -97,6 +107,7 @@ Content-Type: application/json
 ```
 
 **Request Body:**
+
 ```typescript
 {
   type?: DocumentType,
@@ -109,6 +120,7 @@ Content-Type: application/json
 ```
 
 #### 6. Delete Document
+
 ```http
 DELETE /api/mentor-applications/:applicationId/documents/:documentId
 Authorization: Bearer <token>
@@ -119,12 +131,14 @@ Authorization: Bearer <token>
 ### Admin Endpoints
 
 #### 1. Get Application Documents (Admin View)
+
 ```http
 GET /api/admin/mentor-applications/:applicationId/documents
 Authorization: Bearer <admin-token>
 ```
 
 #### 2. Get Document Details (Admin View)
+
 ```http
 GET /api/admin/mentor-applications/:applicationId/documents/:documentId
 Authorization: Bearer <admin-token>
@@ -133,6 +147,7 @@ Authorization: Bearer <admin-token>
 **Response:** `AdminDocumentResponseDto` (includes verification details)
 
 #### 3. Verify/Reject Document
+
 ```http
 POST /api/admin/mentor-applications/:applicationId/documents/:documentId/verify
 Authorization: Bearer <admin-token>
@@ -140,6 +155,7 @@ Content-Type: application/json
 ```
 
 **Request Body:**
+
 ```typescript
 {
   verified: boolean,    // true = verify, false = reject
@@ -148,12 +164,14 @@ Content-Type: application/json
 ```
 
 #### 4. Get Document Statistics
+
 ```http
 GET /api/admin/mentor-applications/:applicationId/documents-stats
 Authorization: Bearer <admin-token>
 ```
 
 **Response:**
+
 ```typescript
 {
   total: number,
@@ -244,40 +262,45 @@ Migration file: `src/migrations/1734700000000-CreateApplicationDocuments.ts`
 ## Example Usage
 
 ### Upload Certificate
+
 ```typescript
-const formData = new FormData();
-formData.append('file', certificateFile);
-formData.append('type', 'certificate');
-formData.append('title', 'AWS Solutions Architect Certificate');
-formData.append('description', 'Professional certification for cloud architecture');
-formData.append('issuedYear', '2023');
-formData.append('issuingOrganization', 'Amazon Web Services');
+const formData = new FormData()
+formData.append('file', certificateFile)
+formData.append('type', 'certificate')
+formData.append('title', 'AWS Solutions Architect Certificate')
+formData.append(
+  'description',
+  'Professional certification for cloud architecture'
+)
+formData.append('issuedYear', '2023')
+formData.append('issuingOrganization', 'Amazon Web Services')
 
 const response = await fetch('/api/mentor-applications/app-123/documents', {
   method: 'POST',
   headers: {
-    'Authorization': `Bearer ${token}`
+    Authorization: `Bearer ${token}`
   },
   body: formData
-});
+})
 
-const document = await response.json();
-console.log('Uploaded:', document.id);
+const document = await response.json()
+console.log('Uploaded:', document.id)
 ```
 
 ### Admin Verify Document
+
 ```typescript
 await fetch('/api/admin/mentor-applications/app-123/documents/doc-123/verify', {
   method: 'POST',
   headers: {
-    'Authorization': `Bearer ${adminToken}`,
+    Authorization: `Bearer ${adminToken}`,
     'Content-Type': 'application/json'
   },
   body: JSON.stringify({
     verified: true,
     notes: 'Certificate verified successfully'
   })
-});
+})
 ```
 
 ## Error Codes
@@ -293,4 +316,3 @@ await fetch('/api/admin/mentor-applications/app-123/documents/doc-123/verify', {
 - Empty array `[]` được trả về cho application mới tạo (chưa có documents)
 - Documents có `displayOrder` để sắp xếp thứ tự hiển thị
 - Admin có thể xem verification details (notes, verifiedBy, verifiedAt)
-

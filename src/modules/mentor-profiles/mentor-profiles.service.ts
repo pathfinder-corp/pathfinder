@@ -1,8 +1,4 @@
-import {
-  Injectable,
-  Logger,
-  NotFoundException
-} from '@nestjs/common'
+import { Injectable, Logger, NotFoundException } from '@nestjs/common'
 import { ConfigService } from '@nestjs/config'
 import { InjectRepository } from '@nestjs/typeorm'
 import { Repository } from 'typeorm'
@@ -506,7 +502,8 @@ export class MentorProfilesService {
     if (dto.issuedYear !== undefined) updateData.issuedYear = dto.issuedYear
     if (dto.issuingOrganization !== undefined)
       updateData.issuingOrganization = dto.issuingOrganization
-    if (dto.displayOrder !== undefined) updateData.displayOrder = dto.displayOrder
+    if (dto.displayOrder !== undefined)
+      updateData.displayOrder = dto.displayOrder
 
     await this.documentRepository.update({ id: documentId }, updateData)
 

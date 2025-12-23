@@ -134,9 +134,10 @@ export class MentorshipRequestsController {
       if (mentorship) {
         // Ensure conversation exists and is linked to the new mentorship
         // This will reuse existing conversation if available and update mentorshipId
-        const conversation =
-          await this.chatService.getOrCreateConversation(mentorship.id)
-        
+        const conversation = await this.chatService.getOrCreateConversation(
+          mentorship.id
+        )
+
         if (conversation) {
           const eventData = {
             mentorshipId: mentorship.id,
@@ -154,7 +155,7 @@ export class MentorshipRequestsController {
           this.chatGateway.server
             .to(`user:${mentorship.mentorId}`)
             .emit('mentorship:started', eventData)
-          
+
           this.chatGateway.server
             .to(`user:${mentorship.studentId}`)
             .emit('mentorship:started', eventData)

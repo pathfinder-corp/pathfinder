@@ -6,12 +6,7 @@ import { MentorUserDto } from './mentor-profile-response.dto'
 /**
  * Helper functions for MIME type checking
  */
-const IMAGE_MIME_TYPES = [
-  'image/jpeg',
-  'image/png',
-  'image/gif',
-  'image/webp'
-]
+const IMAGE_MIME_TYPES = ['image/jpeg', 'image/png', 'image/gif', 'image/webp']
 
 const WORD_MIME_TYPES = [
   'application/msword',

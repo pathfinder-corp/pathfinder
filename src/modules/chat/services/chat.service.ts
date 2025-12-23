@@ -10,7 +10,10 @@ import { ConfigService } from '@nestjs/config'
 import { Repository } from 'typeorm'
 
 import { MentorProfilesService } from '../../mentor-profiles/mentor-profiles.service'
-import { Mentorship, MentorshipStatus } from '../../mentorships/entities/mentorship.entity'
+import {
+  Mentorship,
+  MentorshipStatus
+} from '../../mentorships/entities/mentorship.entity'
 import { MentorshipsService } from '../../mentorships/mentorships.service'
 import {
   EditMessageDto,
@@ -83,22 +86,24 @@ export class ChatService {
             where: { id: existingConversation.id },
             relations: ['mentorship', 'participant1', 'participant2']
           })
-          
+
           if (!conversation) {
             throw new NotFoundException(
               `Failed to reload conversation ${existingConversation.id}`
             )
           }
-          
+
           // Ensure mentorship relation is refreshed
           conversation.mentorship = mentorship
-        } else if (existingConversation.mentorship?.status === MentorshipStatus.ACTIVE) {
+        } else if (
+          existingConversation.mentorship?.status === MentorshipStatus.ACTIVE
+        ) {
           // Old mentorship is still active, this shouldn't happen normally
           // But if it does, we should not reuse to avoid conflicts
           this.logger.warn(
             `Found active conversation ${existingConversation.id} with different mentorship ${existingConversation.mentorshipId}. Creating new conversation for mentorship ${mentorshipId}`
           )
-          
+
           // Create new conversation instead of reusing
           conversation = this.conversationRepository.create({
             mentorshipId,
@@ -107,19 +112,19 @@ export class ChatService {
           })
 
           conversation = await this.conversationRepository.save(conversation)
-          
+
           // Reload with relations
           conversation = await this.conversationRepository.findOne({
             where: { id: conversation.id },
             relations: ['mentorship', 'participant1', 'participant2']
           })
-          
+
           if (!conversation) {
             throw new NotFoundException(
               `Failed to reload newly created conversation`
             )
           }
-          
+
           this.logger.log(
             `Created new conversation ${conversation.id} for mentorship ${mentorshipId} (old conversation ${existingConversation.id} has ended mentorship)`
           )
@@ -128,7 +133,7 @@ export class ChatService {
           this.logger.log(
             `Existing conversation ${existingConversation.id} has ended mentorship ${existingConversation.mentorshipId}. Creating new conversation for active mentorship ${mentorshipId}`
           )
-          
+
           conversation = this.conversationRepository.create({
             mentorshipId,
             participant1Id: mentorship.mentorId,
@@ -136,19 +141,19 @@ export class ChatService {
           })
 
           conversation = await this.conversationRepository.save(conversation)
-          
+
           // Reload with relations
           conversation = await this.conversationRepository.findOne({
             where: { id: conversation.id },
             relations: ['mentorship', 'participant1', 'participant2']
           })
-          
+
           if (!conversation) {
             throw new NotFoundException(
               `Failed to reload newly created conversation`
             )
           }
-          
+
           this.logger.log(
             `Created new conversation ${conversation.id} for mentorship ${mentorshipId}`
           )
@@ -162,19 +167,19 @@ export class ChatService {
         })
 
         conversation = await this.conversationRepository.save(conversation)
-        
+
         // Reload with relations
         conversation = await this.conversationRepository.findOne({
           where: { id: conversation.id },
           relations: ['mentorship', 'participant1', 'participant2']
         })
-        
+
         if (!conversation) {
           throw new NotFoundException(
             `Failed to reload newly created conversation`
           )
         }
-        
+
         this.logger.log(
           `Created conversation ${conversation.id} for mentorship ${mentorshipId}`
         )
@@ -313,7 +318,9 @@ export class ChatService {
       throw new ForbiddenException('Not a participant of this conversation')
     }
 
-    const mentorship = await this.mentorshipsService.findOne(conversation.mentorshipId)
+    const mentorship = await this.mentorshipsService.findOne(
+      conversation.mentorshipId
+    )
     if (!mentorship) {
       throw new NotFoundException(
         `Mentorship ${conversation.mentorshipId} not found for conversation ${conversationId}`
@@ -411,10 +418,14 @@ export class ChatService {
     const fileExtension = this.getFileExtension(file.mimetype)
     const storedFilename = `${conversationId}-${Date.now()}${fileExtension}`
 
-    const result = await this.imagekitService.upload(file.buffer, storedFilename, {
-      folder: `/chat/${conversationId}`,
-      tags: ['chat', conversationId]
-    })
+    const result = await this.imagekitService.upload(
+      file.buffer,
+      storedFilename,
+      {
+        folder: `/chat/${conversationId}`,
+        tags: ['chat', conversationId]
+      }
+    )
 
     const isImage = file.mimetype.startsWith('image/')
 
@@ -472,9 +483,7 @@ export class ChatService {
       this.uploadAllowedMimeTypes.length > 0 &&
       !this.uploadAllowedMimeTypes.includes(file.mimetype)
     ) {
-      throw new BadRequestException(
-        `File type ${file.mimetype} is not allowed`
-      )
+      throw new BadRequestException(`File type ${file.mimetype} is not allowed`)
     }
   }
 
@@ -493,7 +502,12 @@ export class ChatService {
   async getMessages(
     conversationId: string,
     query: GetMessagesQueryDto
-  ): Promise<{ messages: Message[]; hasMore: boolean; nextCursor?: string; mentorship: Mentorship }> {
+  ): Promise<{
+    messages: Message[]
+    hasMore: boolean
+    nextCursor?: string
+    mentorship: Mentorship
+  }> {
     const { limit = 50, before } = query
 
     // First get the conversation to access mentorship
@@ -506,7 +520,9 @@ export class ChatService {
       throw new NotFoundException('Conversation not found')
     }
 
-    const mentorship = await this.mentorshipsService.findOne(conversation.mentorshipId)
+    const mentorship = await this.mentorshipsService.findOne(
+      conversation.mentorshipId
+    )
     if (!mentorship) {
       throw new NotFoundException(
         `Mentorship ${conversation.mentorshipId} not found for conversation ${conversationId}`
@@ -558,7 +574,13 @@ export class ChatService {
   ): Promise<{ message: Message; mentorship: Mentorship }> {
     const message = await this.messageRepository.findOne({
       where: { id: messageId },
-      relations: ['sender', 'parentMessage', 'parentMessage.sender', 'conversation', 'conversation.mentorship']
+      relations: [
+        'sender',
+        'parentMessage',
+        'parentMessage.sender',
+        'conversation',
+        'conversation.mentorship'
+      ]
     })
 
     if (!message) {
@@ -581,7 +603,9 @@ export class ChatService {
 
     this.logger.log(`Message ${messageId} edited by user ${userId}`)
 
-    const mentorship = await this.mentorshipsService.findOne(message.conversation!.mentorshipId)
+    const mentorship = await this.mentorshipsService.findOne(
+      message.conversation!.mentorshipId
+    )
     if (!mentorship) {
       throw new NotFoundException(
         `Mentorship ${message.conversation!.mentorshipId} not found for conversation ${message.conversationId}`
@@ -594,10 +618,19 @@ export class ChatService {
     }
   }
 
-  async deleteMessage(messageId: string, userId: string): Promise<{ message: Message; mentorship: Mentorship }> {
+  async deleteMessage(
+    messageId: string,
+    userId: string
+  ): Promise<{ message: Message; mentorship: Mentorship }> {
     const message = await this.messageRepository.findOne({
       where: { id: messageId },
-      relations: ['sender', 'parentMessage', 'parentMessage.sender', 'conversation', 'conversation.mentorship']
+      relations: [
+        'sender',
+        'parentMessage',
+        'parentMessage.sender',
+        'conversation',
+        'conversation.mentorship'
+      ]
     })
 
     if (!message) {
@@ -620,7 +653,9 @@ export class ChatService {
 
     this.logger.log(`Message ${messageId} deleted by user ${userId}`)
 
-    const mentorship = await this.mentorshipsService.findOne(message.conversation!.mentorshipId)
+    const mentorship = await this.mentorshipsService.findOne(
+      message.conversation!.mentorshipId
+    )
     if (!mentorship) {
       throw new NotFoundException(
         `Mentorship ${message.conversation!.mentorshipId} not found for conversation ${message.conversationId}`

@@ -1,0 +1,33 @@
+# Set the default behavior to force LF on checkout
+* text=auto eol=lf
+
+# Explicitly handle common binary files to prevent corruption
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.ico binary
+*.webp binary
+*.svg text eol=lf
+
+# Documents
+*.pdf binary
+
+# Fonts
+*.woff binary
+*.woff2 binary
+*.ttf binary
+*.eot binary
+
+# Archives
+*.zip binary
+*.tar binary
+*.gz binary
+
+# Keep shell scripts with LF (important for cross-platform execution)
+*.sh text eol=lf
+
+# Windows-specific files should keep CRLF
+*.bat text eol=crlf
+*.cmd text eol=crlf
+*.ps1 text eol=crlf
