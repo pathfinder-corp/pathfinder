@@ -57,6 +57,16 @@ export class ChatController {
   ): Promise<ConversationResponseDto[]> {
     const conversations = await this.chatService.getUserConversations(user.id)
 
+    const userIds = new Set<string>()
+    conversations.forEach((conv) => {
+      if (conv.participant1Id) userIds.add(conv.participant1Id)
+      if (conv.participant2Id) userIds.add(conv.participant2Id)
+    })
+
+    const onlineUserIds = new Set(
+      await this.redisService.getOnlineUsers(Array.from(userIds))
+    )
+
     return conversations.map((conv) => {
       const dto = plainToInstance(ConversationResponseDto, conv, {
         excludeExtraneousValues: true
@@ -79,12 +89,16 @@ export class ChatController {
           conv.mentorship.mentorId === dto.participant1.id
             ? 'mentor'
             : 'student'
+
+        dto.participant1.isOnline = onlineUserIds.has(dto.participant1.id)
       }
       if (dto.participant2 && conv.mentorship) {
         dto.participant2.role =
           conv.mentorship.mentorId === dto.participant2.id
             ? 'mentor'
             : 'student'
+
+        dto.participant2.isOnline = onlineUserIds.has(dto.participant2.id)
       }
 
       return dto
@@ -128,12 +142,20 @@ export class ChatController {
         conversation.mentorship.mentorId === dto.participant1.id
           ? 'mentor'
           : 'student'
+
+      dto.participant1.isOnline = await this.redisService.isUserOnline(
+        dto.participant1.id
+      )
     }
     if (dto.participant2 && conversation.mentorship) {
       dto.participant2.role =
         conversation.mentorship.mentorId === dto.participant2.id
           ? 'mentor'
           : 'student'
+
+      dto.participant2.isOnline = await this.redisService.isUserOnline(
+        dto.participant2.id
+      )
     }
 
     return dto
@@ -159,6 +181,18 @@ export class ChatController {
     const { messages, hasMore, nextCursor, mentorship } =
       await this.chatService.getMessages(conversationId, query)
 
+    const userIds = new Set<string>()
+    messages.forEach((msg) => {
+      if (msg.senderId) userIds.add(msg.senderId)
+      if (msg.parentMessage?.senderId) {
+        userIds.add(msg.parentMessage.senderId)
+      }
+    })
+
+    const onlineUserIds = new Set(
+      await this.redisService.getOnlineUsers(Array.from(userIds))
+    )
+
     return {
       messages: messages.map((msg) => {
         const dto = plainToInstance(MessageResponseDto, msg, {
@@ -169,6 +203,8 @@ export class ChatController {
         if (dto.sender && mentorship) {
           dto.sender.role =
             mentorship.mentorId === dto.sender.id ? 'mentor' : 'student'
+
+          dto.sender.isOnline = onlineUserIds.has(dto.sender.id)
         }
 
         // Add role to parent message sender if exists
@@ -177,6 +213,10 @@ export class ChatController {
             mentorship.mentorId === dto.parentMessage.sender.id
               ? 'mentor'
               : 'student'
+
+          dto.parentMessage.sender.isOnline = onlineUserIds.has(
+            dto.parentMessage.sender.id
+          )
         }
 
         return dto

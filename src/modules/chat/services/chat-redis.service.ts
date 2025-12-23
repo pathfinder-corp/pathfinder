@@ -60,8 +60,14 @@ export class ChatRedisService implements OnModuleDestroy {
 
   async getOnlineUsers(userIds: string[]): Promise<string[]> {
     if (userIds.length === 0) return []
-    const results = await this.client.smismember('online:users', ...userIds)
-    return userIds.filter((_, index) => results[index] === 1)
+
+    // Redis version in some environments may not support SMISMEMBER,
+    // so we fall back to checking SISMEMBER for each userId.
+    const checks = await Promise.all(
+      userIds.map((userId) => this.client.sismember('online:users', userId))
+    )
+
+    return userIds.filter((_, index) => checks[index] === 1)
   }
 
   // Typing indicators

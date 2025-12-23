@@ -30,6 +30,12 @@ export class MessageUserDto {
   @ApiPropertyOptional({ enum: ['mentor', 'student'] })
   @Expose()
   role?: 'mentor' | 'student'
+
+  @ApiPropertyOptional({
+    description: 'Whether this user is currently online (real-time presence)'
+  })
+  @Expose()
+  isOnline?: boolean
 }
 
 export class MessageResponseDto {
