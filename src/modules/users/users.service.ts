@@ -2,22 +2,34 @@ import {
   ConflictException,
   ForbiddenException,
   Injectable,
-  NotFoundException
+  NotFoundException,
+  BadRequestException
 } from '@nestjs/common'
+import { ConfigService } from '@nestjs/config'
 import { InjectRepository } from '@nestjs/typeorm'
 import * as bcrypt from 'bcrypt'
 import { Repository } from 'typeorm'
 
+import { ImageKitService } from '../../common/services/imagekit.service'
 import { CreateUserDto } from './dto/create-user.dto'
 import { UpdateUserDto } from './dto/update-user.dto'
-import { User, UserRole, UserStatus } from './entities/user.entity'
+import { User, UserRole } from './entities/user.entity'
 
 @Injectable()
 export class UsersService {
   constructor(
     @InjectRepository(User)
-    private readonly userRepository: Repository<User>
+    private readonly userRepository: Repository<User>,
+    private readonly imagekitService: ImageKitService,
+    private readonly configService: ConfigService
   ) {}
+
+  private get maxAvatarSize(): number {
+    return (
+      this.configService.get<number>('upload.maxFileSizeBytes') ||
+      5 * 1024 * 1024
+    )
+  }
 
   async create(createUserDto: CreateUserDto): Promise<User> {
     const existingUser = await this.userRepository.findOne({
@@ -105,5 +117,60 @@ export class UsersService {
     })
 
     return users
+  }
+
+  async updateAvatar(
+    userId: string,
+    file: Express.Multer.File
+  ): Promise<User> {
+    const user = await this.findOne(userId)
+
+    if (!file) {
+      throw new BadRequestException('File is required')
+    }
+
+    if (file.size <= 0) {
+      throw new BadRequestException('File is empty')
+    }
+
+    if (file.size > this.maxAvatarSize) {
+      throw new BadRequestException(
+        `Avatar size exceeds maximum allowed size of ${this.maxAvatarSize} bytes`
+      )
+    }
+
+    if (!file.mimetype.startsWith('image/')) {
+      throw new BadRequestException('Only image files are allowed for avatar')
+    }
+
+    if (!this.imagekitService.isEnabled()) {
+      throw new BadRequestException(
+        'Avatar upload service is not available. Please contact administrator.'
+      )
+    }
+
+    const extensionMap: Record<string, string> = {
+      'image/jpeg': '.jpg',
+      'image/png': '.png',
+      'image/gif': '.gif',
+      'image/webp': '.webp'
+    }
+
+    const ext = extensionMap[file.mimetype] || ''
+    const fileName = `${userId}-${Date.now()}${ext}`
+
+    const result = await this.imagekitService.upload(file.buffer, fileName, {
+      folder: `/avatars/users/${userId}`,
+      tags: ['avatar', userId]
+    })
+
+    const optimizedUrl = this.imagekitService.getOptimizedUrl(
+      result.filePath,
+      512
+    )
+
+    user.avatar = optimizedUrl
+
+    return this.userRepository.save(user)
   }
 }

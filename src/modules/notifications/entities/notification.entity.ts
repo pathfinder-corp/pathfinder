@@ -31,7 +31,11 @@ export enum NotificationType {
 
   // Mentorship notifications
   MENTORSHIP_STARTED = 'mentorship_started',
-  MENTORSHIP_ENDED = 'mentorship_ended'
+  MENTORSHIP_ENDED = 'mentorship_ended',
+
+  // Admin / role notifications
+  MENTOR_ROLE_GRANTED = 'mentor_role_granted',
+  MENTOR_ROLE_REVOKED = 'mentor_role_revoked'
 }
 
 @Entity('notifications')

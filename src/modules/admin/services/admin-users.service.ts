@@ -8,6 +8,9 @@ import { plainToInstance } from 'class-transformer'
 import { Repository } from 'typeorm'
 
 import { Assessment } from '../../assessments/entities/assessment.entity'
+import { MentorProfilesService } from '../../mentor-profiles/mentor-profiles.service'
+import { NotificationType } from '../../notifications/entities/notification.entity'
+import { NotificationsService } from '../../notifications/notifications.service'
 import { Roadmap } from '../../roadmaps/entities/roadmap.entity'
 import { User, UserRole, UserStatus } from '../../users/entities/user.entity'
 import {
@@ -26,7 +29,9 @@ export class AdminUsersService {
     @InjectRepository(Roadmap)
     private readonly roadmapsRepository: Repository<Roadmap>,
     @InjectRepository(Assessment)
-    private readonly assessmentsRepository: Repository<Assessment>
+    private readonly assessmentsRepository: Repository<Assessment>,
+    private readonly mentorProfilesService: MentorProfilesService,
+    private readonly notificationsService: NotificationsService
   ) {}
 
   async findAll(
@@ -129,6 +134,8 @@ export class AdminUsersService {
       }
     }
 
+    const previousRole = user.role
+
     if (updateDto.role !== undefined) {
       user.role = updateDto.role
     }
@@ -138,6 +145,57 @@ export class AdminUsersService {
     }
 
     const updatedUser = await this.usersRepository.save(user)
+
+    if (updateDto.role !== undefined && updateDto.role !== previousRole) {
+      if (
+        previousRole !== UserRole.MENTOR &&
+        updatedUser.role === UserRole.MENTOR
+      ) {
+        const existingProfile = await this.mentorProfilesService.findByUserId(
+          updatedUser.id
+        )
+
+        if (!existingProfile) {
+          await this.mentorProfilesService.createProfile(updatedUser.id)
+        } else if (!existingProfile.isActive) {
+          await this.mentorProfilesService.reactivateProfile(updatedUser.id)
+        }
+
+        await this.notificationsService.create({
+          userId: updatedUser.id,
+          type: NotificationType.MENTOR_ROLE_GRANTED,
+          title: 'You have been promoted to Mentor',
+          message:
+            'Your account has been granted mentor privileges by an administrator.',
+          payload: {
+            updatedBy: currentUser.id,
+            updatedAt: new Date().toISOString()
+          }
+        })
+      }
+
+      if (
+        previousRole === UserRole.MENTOR &&
+        updatedUser.role !== UserRole.MENTOR
+      ) {
+        await this.mentorProfilesService.deactivateProfile(
+          updatedUser.id,
+          currentUser.id
+        )
+
+        await this.notificationsService.create({
+          userId: updatedUser.id,
+          type: NotificationType.MENTOR_ROLE_REVOKED,
+          title: 'Your mentor role has been revoked',
+          message:
+            'Your mentor privileges have been removed by an administrator.',
+          payload: {
+            updatedBy: currentUser.id,
+            updatedAt: new Date().toISOString()
+          }
+        })
+      }
+    }
 
     return plainToInstance(AdminUserResponseDto, updatedUser, {
       excludeExtraneousValues: true

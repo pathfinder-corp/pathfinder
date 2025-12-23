@@ -11,11 +11,15 @@ import {
   Patch,
   Post,
   Query,
+  UploadedFile,
   UseGuards,
   UseInterceptors
 } from '@nestjs/common'
+import { FileInterceptor } from '@nestjs/platform-express'
 import {
   ApiBearerAuth,
+  ApiBody,
+  ApiConsumes,
   ApiOperation,
   ApiResponse,
   ApiTags
@@ -127,6 +131,36 @@ export class UsersController {
   @ApiResponse({ status: 403, description: 'Cannot delete admin users' })
   async remove(@Param('id', new ParseUUIDPipe()) id: string) {
     await this.usersService.remove(id)
+  }
+
+  @Post('me/avatar')
+  @ApiOperation({ summary: 'Upload my avatar (student or mentor)' })
+  @ApiConsumes('multipart/form-data')
+  @ApiBody({
+    description: 'Avatar image file',
+    schema: {
+      type: 'object',
+      required: ['file'],
+      properties: {
+        file: {
+          type: 'string',
+          format: 'binary'
+        }
+      }
+    }
+  })
+  @ApiResponse({
+    status: 201,
+    description: 'Avatar uploaded successfully',
+    type: UserResponseDto
+  })
+  @UseInterceptors(FileInterceptor('file'))
+  async uploadAvatar(
+    @CurrentUser() user: User,
+    @UploadedFile() file: Express.Multer.File
+  ): Promise<UserResponseDto> {
+    const updated = await this.usersService.updateAvatar(user.id, file)
+    return this.toResponse(updated)
   }
 
   private toResponse(user: User): UserResponseDto {
