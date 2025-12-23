@@ -214,6 +214,27 @@ export class MentorProfilesController {
     return { message: 'Document deleted successfully' }
   }
 
+  @Delete('me')
+  @UseGuards(RolesGuard)
+  @Roles(UserRole.MENTOR)
+  @ApiOperation({ summary: 'Withdraw from being a mentor (self-demote)' })
+  @ApiResponse({
+    status: 200,
+    description: 'Mentor role withdrawn successfully'
+  })
+  @ApiResponse({
+    status: 400,
+    description:
+      'Cannot withdraw while there are active mentorships as a mentor'
+  })
+  async withdrawAsMentor(
+    @CurrentUser() user: User
+  ): Promise<{ message: string }> {
+    await this.profilesService.withdrawAsMentor(user.id)
+
+    return { message: 'You have withdrawn from being a mentor.' }
+  }
+
   @Get(':id')
   @ApiOperation({ summary: 'Get mentor profile by ID' })
   @ApiResponse({ status: 200, type: MentorProfileResponseDto })

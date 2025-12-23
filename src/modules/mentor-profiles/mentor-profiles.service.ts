@@ -1,4 +1,9 @@
-import { Injectable, Logger, NotFoundException } from '@nestjs/common'
+import {
+  BadRequestException,
+  Injectable,
+  Logger,
+  NotFoundException
+} from '@nestjs/common'
 import { ConfigService } from '@nestjs/config'
 import { InjectRepository } from '@nestjs/typeorm'
 import { Repository } from 'typeorm'
@@ -16,7 +21,9 @@ import {
 import { ApplicationStatus } from '../mentor-applications/entities/application-status.enum'
 import { MentorApplication } from '../mentor-applications/entities/mentor-application.entity'
 import { DocumentUploadService } from '../mentor-applications/services/document-upload.service'
+import { Mentorship, MentorshipStatus } from '../mentorships/entities/mentorship.entity'
 import { UserRole } from '../users/entities/user.entity'
+import { UsersService } from '../users/users.service'
 import { SearchMentorsQueryDto } from './dto/search-mentors.dto'
 import { UpdateMentorProfileDto } from './dto/update-profile.dto'
 import { MentorProfile } from './entities/mentor-profile.entity'
@@ -32,9 +39,12 @@ export class MentorProfilesService {
     private readonly applicationRepository: Repository<MentorApplication>,
     @InjectRepository(ApplicationDocument)
     private readonly documentRepository: Repository<ApplicationDocument>,
+    @InjectRepository(Mentorship)
+    private readonly mentorshipRepository: Repository<Mentorship>,
     private readonly auditLogService: AuditLogService,
     private readonly configService: ConfigService,
-    private readonly documentUploadService: DocumentUploadService
+    private readonly documentUploadService: DocumentUploadService,
+    private readonly usersService: UsersService
   ) {}
 
   async createProfile(
@@ -353,6 +363,62 @@ export class MentorProfilesService {
     })
 
     return this.findById(profile.id)
+  }
+
+  /**
+   * Mentor voluntarily withdraws from being a mentor.
+   * - Requires no active mentorships as mentor.
+   * - Demotes user role to STUDENT.
+   * - Deactivates mentor profile (treated as deleted in app logic).
+   */
+  async withdrawAsMentor(userId: string): Promise<void> {
+    const profile = await this.findByUserId(userId)
+
+    if (!profile) {
+      throw new NotFoundException('Mentor profile not found')
+    }
+
+    // Ensure there are no active mentorships where this user is the mentor
+    const activeMentorships = await this.mentorshipRepository.count({
+      where: {
+        mentorId: userId,
+        status: MentorshipStatus.ACTIVE
+      }
+    })
+
+    if (activeMentorships > 0) {
+      throw new BadRequestException(
+        'You still have active mentorships. Please end all active mentorships before withdrawing as a mentor.'
+      )
+    }
+
+    const user = await this.usersService.findOne(userId)
+
+    // Only demote if currently mentor (defensive check)
+    if (user.role === UserRole.MENTOR) {
+      await this.usersService.update(userId, {
+        role: UserRole.STUDENT
+      } as any)
+    }
+
+    // Deactivate mentor profile and stop accepting mentees
+    await this.profileRepository.update(
+      { id: profile.id },
+      { isActive: false, isAcceptingMentees: false }
+    )
+
+    await this.auditLogService.log({
+      actorId: userId,
+      action: 'mentor_withdrawn',
+      entityType: 'mentor_profile',
+      entityId: profile.id,
+      changes: {
+        isActive: false,
+        isAcceptingMentees: false
+      }
+    })
+
+    this.logger.log(`User ${userId} withdrew from mentor role`)
   }
 
   /**
