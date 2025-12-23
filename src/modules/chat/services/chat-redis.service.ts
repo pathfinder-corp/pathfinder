@@ -42,7 +42,14 @@ export class ChatRedisService implements OnModuleDestroy {
 
   // Presence tracking
   async setUserOnline(userId: string, socketId: string): Promise<void> {
-    await this.client.hset(`user:${userId}:sockets`, socketId, Date.now())
+    const key = `user:${userId}:sockets`
+
+    const oldSockets = await this.client.hkeys(key)
+    if (oldSockets.length > 0) {
+      await this.client.del(key)
+    }
+
+    await this.client.hset(key, socketId, Date.now())
     await this.client.sadd('online:users', userId)
   }
 
