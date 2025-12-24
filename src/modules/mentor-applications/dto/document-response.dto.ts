@@ -169,6 +169,10 @@ export class DocumentUploaderDto {
   @ApiPropertyOptional()
   @Expose()
   email?: string
+
+  @ApiPropertyOptional({ description: 'User avatar URL' })
+  @Expose()
+  avatar?: string
 }
 
 /**

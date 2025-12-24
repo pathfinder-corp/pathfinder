@@ -50,6 +50,7 @@ import {
 import { SearchMentorsQueryDto } from './dto/search-mentors.dto'
 import { UpdateMentorProfileDto } from './dto/update-profile.dto'
 import { MentorProfilesService } from './mentor-profiles.service'
+import { MentorReviewsService } from './services/mentor-reviews.service'
 
 @ApiTags('Mentor Profiles')
 @ApiBearerAuth()
@@ -58,7 +59,8 @@ import { MentorProfilesService } from './mentor-profiles.service'
 export class MentorProfilesController {
   constructor(
     private readonly profilesService: MentorProfilesService,
-    private readonly documentUploadService: DocumentUploadService
+    private readonly documentUploadService: DocumentUploadService,
+    private readonly reviewsService: MentorReviewsService
   ) {}
 
   @Get('me')
@@ -103,12 +105,19 @@ export class MentorProfilesController {
     const page = query.page ?? 1
     const limit = query.limit ?? 20
 
-    return {
-      mentors: mentors.map((m) =>
-        plainToInstance(MentorProfileResponseDto, m, {
+    const mentorsWithStats = await Promise.all(
+      mentors.map(async (m) => {
+        const reviewStats = await this.reviewsService.getReviewStats(m.userId)
+        const mentorDto = plainToInstance(MentorProfileResponseDto, m, {
           excludeExtraneousValues: true
         })
-      ),
+        mentorDto.reviewStats = reviewStats
+        return mentorDto
+      })
+    )
+
+    return {
+      mentors: mentorsWithStats,
       meta: {
         total,
         page,
@@ -244,9 +253,19 @@ export class MentorProfilesController {
   ): Promise<MentorProfileResponseDto> {
     const profile = await this.profilesService.findPublicProfile(id)
 
-    return plainToInstance(MentorProfileResponseDto, profile, {
+    // Get review stats
+    const reviewStats = await this.reviewsService.getReviewStats(
+      profile.userId
+    )
+
+    const profileDto = plainToInstance(MentorProfileResponseDto, profile, {
       excludeExtraneousValues: true
     })
+
+    // Add review stats
+    profileDto.reviewStats = reviewStats
+
+    return profileDto
   }
 
   @Get(':id/with-documents')
