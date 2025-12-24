@@ -5,10 +5,11 @@ import {
   Logger,
   NotFoundException
 } from '@nestjs/common'
-import { InjectRepository } from '@nestjs/typeorm'
 import { ConfigService } from '@nestjs/config'
+import { InjectRepository } from '@nestjs/typeorm'
 import { Repository } from 'typeorm'
 
+import { ImageKitService } from '../../../common/services/imagekit.service'
 import { MentorProfilesService } from '../../mentor-profiles/mentor-profiles.service'
 import {
   Mentorship,
@@ -18,11 +19,11 @@ import { MentorshipsService } from '../../mentorships/mentorships.service'
 import {
   EditMessageDto,
   GetMessagesQueryDto,
+  SearchMessagesQueryDto,
   SendMessageDto
 } from '../dto/message.dto'
 import { Conversation } from '../entities/conversation.entity'
 import { Message, MessageType } from '../entities/message.entity'
-import { ImageKitService } from '../../../common/services/imagekit.service'
 
 @Injectable()
 export class ChatService {
@@ -535,6 +536,76 @@ export class ChatService {
       .leftJoinAndSelect('message.parentMessage', 'parentMessage')
       .leftJoinAndSelect('parentMessage.sender', 'parentSender')
       .where('message.conversation_id = :conversationId', { conversationId })
+      .orderBy('message.createdAt', 'DESC')
+      .take(limit + 1)
+
+    if (before) {
+      const cursorMessage = await this.messageRepository.findOne({
+        where: { id: before }
+      })
+
+      if (cursorMessage) {
+        qb.andWhere('message.createdAt < :cursorDate', {
+          cursorDate: cursorMessage.createdAt
+        })
+      }
+    }
+
+    const messages = await qb.getMany()
+    const hasMore = messages.length > limit
+
+    if (hasMore) {
+      messages.pop()
+    }
+
+    const nextCursor = hasMore ? messages[messages.length - 1].id : undefined
+
+    return {
+      messages: messages.reverse(),
+      hasMore,
+      nextCursor,
+      mentorship
+    }
+  }
+
+  async searchMessages(
+    conversationId: string,
+    query: SearchMessagesQueryDto
+  ): Promise<{
+    messages: Message[]
+    hasMore: boolean
+    nextCursor?: string
+    mentorship: Mentorship
+  }> {
+    const { limit = 50, before, q } = query
+
+    // First get the conversation to access mentorship
+    const conversation = await this.conversationRepository.findOne({
+      where: { id: conversationId },
+      relations: ['mentorship']
+    })
+
+    if (!conversation) {
+      throw new NotFoundException('Conversation not found')
+    }
+
+    const mentorship = await this.mentorshipsService.findOne(
+      conversation.mentorshipId
+    )
+    if (!mentorship) {
+      throw new NotFoundException(
+        `Mentorship ${conversation.mentorshipId} not found for conversation ${conversationId}`
+      )
+    }
+
+    const qb = this.messageRepository
+      .createQueryBuilder('message')
+      .leftJoinAndSelect('message.sender', 'sender')
+      .leftJoinAndSelect('message.parentMessage', 'parentMessage')
+      .leftJoinAndSelect('parentMessage.sender', 'parentSender')
+      .where('message.conversation_id = :conversationId', { conversationId })
+      .andWhere('message.is_deleted = false')
+      .andWhere('message.content ILIKE :search', { search: `%${q}%` })
       .orderBy('message.createdAt', 'DESC')
       .take(limit + 1)
 

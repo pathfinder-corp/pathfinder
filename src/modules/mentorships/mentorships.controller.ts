@@ -1,6 +1,7 @@
 import {
   Body,
   Controller,
+  ForbiddenException,
   Get,
   Inject,
   Param,
@@ -87,7 +88,9 @@ export class MentorshipsController {
 
     // Verify user is participant
     if (mentorship.mentorId !== user.id && mentorship.studentId !== user.id) {
-      throw new Error('Not authorized to view this mentorship')
+      throw new ForbiddenException(
+        'You are not a participant of this mentorship'
+      )
     }
 
     return plainToInstance(MentorshipResponseDto, mentorship, {

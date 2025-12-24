@@ -2,6 +2,7 @@ import {
   Body,
   Controller,
   Delete,
+  ForbiddenException,
   Get,
   Param,
   ParseUUIDPipe,
@@ -30,6 +31,7 @@ import {
   ConversationResponseDto,
   EditMessageDto,
   GetMessagesQueryDto,
+  SearchMessagesQueryDto,
   MessageListResponseDto,
   MessageResponseDto,
   SendMessageDto
@@ -175,11 +177,84 @@ export class ChatController {
     )
 
     if (!isParticipant) {
-      throw new Error('Not a participant')
+      throw new ForbiddenException('Not a participant')
     }
 
     const { messages, hasMore, nextCursor, mentorship } =
       await this.chatService.getMessages(conversationId, query)
+
+    const userIds = new Set<string>()
+    messages.forEach((msg) => {
+      if (msg.senderId) userIds.add(msg.senderId)
+      if (msg.parentMessage?.senderId) {
+        userIds.add(msg.parentMessage.senderId)
+      }
+    })
+
+    const onlineUserIds = new Set(
+      await this.redisService.getOnlineUsers(Array.from(userIds))
+    )
+
+    return {
+      messages: messages.map((msg) => {
+        const dto = plainToInstance(MessageResponseDto, msg, {
+          excludeExtraneousValues: true
+        })
+
+        // Add role to sender
+        if (dto.sender && mentorship) {
+          dto.sender.role =
+            mentorship.mentorId === dto.sender.id ? 'mentor' : 'student'
+
+          dto.sender.isOnline = onlineUserIds.has(dto.sender.id)
+        }
+
+        // Add role to parent message sender if exists
+        if (dto.parentMessage?.sender && mentorship) {
+          dto.parentMessage.sender.role =
+            mentorship.mentorId === dto.parentMessage.sender.id
+              ? 'mentor'
+              : 'student'
+
+          dto.parentMessage.sender.isOnline = onlineUserIds.has(
+            dto.parentMessage.sender.id
+          )
+        }
+
+        return dto
+      }),
+      hasMore,
+      nextCursor,
+      mentorshipStatus: mentorship?.status,
+      mentorshipId: mentorship?.id,
+      mentorshipEndReason:
+        mentorship?.status !== 'active' ? mentorship?.endReason : undefined,
+      mentorshipEndedBy:
+        mentorship?.status !== 'active' ? mentorship?.endedBy : undefined,
+      mentorshipEndedAt:
+        mentorship?.status !== 'active' ? mentorship?.endedAt : undefined
+    }
+  }
+
+  @Get('conversations/:conversationId/messages/search')
+  @ApiOperation({ summary: 'Search messages in a conversation' })
+  @ApiResponse({ status: 200, type: MessageListResponseDto })
+  async searchMessages(
+    @CurrentUser() user: User,
+    @Param('conversationId', ParseUUIDPipe) conversationId: string,
+    @Query() query: SearchMessagesQueryDto
+  ): Promise<MessageListResponseDto> {
+    const isParticipant = await this.chatService.verifyParticipant(
+      conversationId,
+      user.id
+    )
+
+    if (!isParticipant) {
+      throw new ForbiddenException('Not a participant')
+    }
+
+    const { messages, hasMore, nextCursor, mentorship } =
+      await this.chatService.searchMessages(conversationId, query)
 
     const userIds = new Set<string>()
     messages.forEach((msg) => {

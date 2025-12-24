@@ -173,6 +173,30 @@ export class GetMessagesQueryDto {
   before?: string
 }
 
+export class SearchMessagesQueryDto {
+  @ApiProperty({
+    description: 'Search keyword in message content',
+    maxLength: 200
+  })
+  @IsString()
+  @IsNotEmpty()
+  @MaxLength(200)
+  q: string
+
+  @ApiPropertyOptional({ default: 50, minimum: 1, maximum: 100 })
+  @IsOptional()
+  @Type(() => Number)
+  limit?: number = 50
+
+  @ApiPropertyOptional({
+    description:
+      'Cursor (message ID) to load search results before this message'
+  })
+  @IsOptional()
+  @IsUUID()
+  before?: string
+}
+
 export class MessageListResponseDto {
   @ApiProperty({ type: [MessageResponseDto] })
   @Type(() => MessageResponseDto)
