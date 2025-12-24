@@ -40,7 +40,9 @@ export class AdminContactController {
   constructor(private readonly adminContactService: AdminContactService) {}
 
   @Get()
-  @ApiOperation({ summary: 'List all contact messages with filters and pagination' })
+  @ApiOperation({
+    summary: 'List all contact messages with filters and pagination'
+  })
   @ApiResponse({
     status: 200,
     description: 'Paginated list of contact messages'

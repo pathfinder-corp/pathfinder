@@ -123,6 +123,84 @@ export default () => {
         10
       )
     },
+    contentValidation: {
+      spamKeywords: (
+        process.env.CONTENT_VALIDATION_SPAM_KEYWORDS ||
+        'buy now,click here,limited offer,urgent,act now,win prize,free money,make money fast,work from home,guaranteed income'
+      )
+        .split(',')
+        .map((k) => k.trim().toLowerCase())
+        .filter(Boolean),
+      minQualityScore: parseIntSafe(
+        process.env.CONTENT_VALIDATION_MIN_QUALITY_SCORE,
+        60
+      ),
+      enableAiValidation: parseBoolean(
+        process.env.CONTENT_VALIDATION_ENABLE_AI,
+        true
+      ),
+      enableCaching: parseBoolean(
+        process.env.CONTENT_VALIDATION_ENABLE_CACHE,
+        true
+      ),
+      cacheTtlSeconds: parseIntSafe(
+        process.env.CONTENT_VALIDATION_CACHE_TTL_SECONDS,
+        3600
+      ),
+      weights: {
+        repeatedCharacters: parseIntSafe(
+          process.env.CONTENT_VALIDATION_WEIGHT_REPEATED_CHARS,
+          30
+        ),
+        spamKeyword: parseIntSafe(
+          process.env.CONTENT_VALIDATION_WEIGHT_SPAM_KEYWORD,
+          20
+        ),
+        suspiciousUrls: parseIntSafe(
+          process.env.CONTENT_VALIDATION_WEIGHT_SUSPICIOUS_URLS,
+          25
+        ),
+        lowDiversity: parseIntSafe(
+          process.env.CONTENT_VALIDATION_WEIGHT_LOW_DIVERSITY,
+          20
+        ),
+        excessiveSpecialChars: parseIntSafe(
+          process.env.CONTENT_VALIDATION_WEIGHT_EXCESSIVE_SPECIAL_CHARS,
+          15
+        ),
+        gibberish: parseIntSafe(
+          process.env.CONTENT_VALIDATION_WEIGHT_GIBBERISH,
+          30
+        ),
+        tooShort: parseIntSafe(
+          process.env.CONTENT_VALIDATION_WEIGHT_TOO_SHORT,
+          20
+        ),
+        aiSpamDetection: parseIntSafe(
+          process.env.CONTENT_VALIDATION_WEIGHT_AI_SPAM,
+          40
+        ),
+        sensitiveContent: parseIntSafe(
+          process.env.CONTENT_VALIDATION_WEIGHT_SENSITIVE_CONTENT,
+          50
+        ),
+        arrayFieldSpam: parseIntSafe(
+          process.env.CONTENT_VALIDATION_WEIGHT_ARRAY_FIELD_SPAM,
+          25
+        )
+      },
+      thresholds: {
+        minTextLength: parseIntSafe(
+          process.env.CONTENT_VALIDATION_MIN_TEXT_LENGTH,
+          100
+        ),
+        minWordDiversity: 0.3,
+        maxSpecialCharRatio: 0.15,
+        minVowelRatio: 0.15,
+        maxVowelRatio: 0.6,
+        maxArrayDuplicateRatio: 0.5
+      }
+    },
     upload: {
       maxFileSizeBytes: parseIntSafe(
         process.env.UPLOAD_MAX_FILE_SIZE_BYTES,

@@ -242,6 +242,14 @@ export class MentorApplicationsService {
       payload: { applicationId: saved.id }
     })
 
+    // Run AI validation asynchronously (non-blocking)
+    this.runAsyncAiValidation(saved.id, dto, userId).catch((error) => {
+      this.logger.error(
+        `Failed to run async AI validation for application ${saved.id}`,
+        error
+      )
+    })
+
     if (validationResult.shouldFlag) {
       this.logger.warn(
         `Mentor application ${saved.id} flagged for user ${userId}: ${validationResult.reason}`
@@ -595,6 +603,100 @@ export class MentorApplicationsService {
     )
 
     return this.findOne(applicationId)
+  }
+
+  /**
+   * Run AI validation asynchronously after application submission
+   * Updates application status if AI detects spam
+   */
+  private async runAsyncAiValidation(
+    applicationId: string,
+    dto: CreateApplicationDto,
+    userId: string
+  ): Promise<void> {
+    try {
+      this.logger.debug(
+        `Running async AI validation for application ${applicationId}`
+      )
+
+      // Run full async validation with AI
+      const validationResult =
+        await this.contentValidatorService.validateApplicationAsync(dto)
+
+      // Check if AI detected spam and application should be flagged
+      if (validationResult.shouldFlag && validationResult.aiAnalysis?.isSpam) {
+        const existingApp = await this.applicationRepository.findOne({
+          where: { id: applicationId }
+        })
+
+        if (!existingApp) {
+          this.logger.warn(
+            `Application ${applicationId} not found for AI validation update`
+          )
+          return
+        }
+
+        // Only update if not already flagged
+        if (!existingApp.isFlagged) {
+          existingApp.isFlagged = true
+          existingApp.status = ApplicationStatus.FLAGGED
+          existingApp.contentFlags = {
+            flaggedAt: new Date(),
+            flagType: validationResult.flags,
+            flagScore: validationResult.score,
+            flagReason: `${validationResult.reason}. AI Analysis: ${validationResult.aiAnalysis.reasoning} (confidence: ${(validationResult.aiAnalysis.confidence * 100).toFixed(1)}%)`
+          }
+
+          await this.applicationRepository.save(existingApp)
+
+          // Create status history for AI flagging
+          await this.historyRepository.save({
+            applicationId,
+            previousStatus: ApplicationStatus.PENDING,
+            newStatus: ApplicationStatus.FLAGGED,
+            changedBy: 'system',
+            reason: `AI validation flagged application: ${validationResult.aiAnalysis.reasoning}`
+          })
+
+          // Log audit
+          await this.auditLogService.log({
+            actorId: 'system',
+            action: 'application_ai_flagged',
+            entityType: 'mentor_application',
+            entityId: applicationId,
+            changes: {
+              aiSpamDetected: validationResult.aiAnalysis.isSpam,
+              aiConfidence: validationResult.aiAnalysis.confidence,
+              aiReasoning: validationResult.aiAnalysis.reasoning,
+              newStatus: ApplicationStatus.FLAGGED
+            }
+          })
+
+          // Notify user about the change
+          await this.notificationsService.create({
+            userId,
+            type: NotificationType.APPLICATION_SUBMITTED,
+            title: 'Application Under Review',
+            message:
+              'Your mentor application requires additional review. Our team will review it shortly.',
+            payload: { applicationId }
+          })
+
+          this.logger.warn(
+            `Application ${applicationId} flagged by AI: ${validationResult.aiAnalysis.reasoning}`
+          )
+        }
+      } else if (validationResult.aiAnalysis) {
+        this.logger.debug(
+          `AI validation passed for application ${applicationId}: spam=${validationResult.aiAnalysis.isSpam}, confidence=${validationResult.aiAnalysis.confidence}`
+        )
+      }
+    } catch (error) {
+      this.logger.error(
+        `Error in async AI validation for application ${applicationId}`,
+        error instanceof Error ? error.stack : undefined
+      )
+    }
   }
 
   async getIpHashStatistics(): Promise<

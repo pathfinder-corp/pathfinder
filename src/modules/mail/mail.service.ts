@@ -526,7 +526,9 @@ export class MailService {
                     </td>
                   </tr>
 
-                  ${originalMessage ? `
+                  ${
+                    originalMessage
+                      ? `
                   <tr>
                     <td style="padding-bottom: 12px;">
                       <table
@@ -549,7 +551,9 @@ export class MailService {
                       </table>
                     </td>
                   </tr>
-                  ` : ''}
+                  `
+                      : ''
+                  }
 
                   <tr>
                     <td>

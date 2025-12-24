@@ -1,7 +1,17 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger'
-import { IsEnum, IsNotEmpty, IsOptional, IsString, MaxLength, MinLength } from 'class-validator'
+import {
+  IsEnum,
+  IsNotEmpty,
+  IsOptional,
+  IsString,
+  MaxLength,
+  MinLength
+} from 'class-validator'
 
-import { ContactStatus, ContactType } from '../../contact/entities/contact-message.entity'
+import {
+  ContactStatus,
+  ContactType
+} from '../../contact/entities/contact-message.entity'
 import { PaginationQueryDto } from './pagination.dto'
 
 export class AdminContactQueryDto extends PaginationQueryDto {
@@ -15,7 +25,9 @@ export class AdminContactQueryDto extends PaginationQueryDto {
   @IsEnum(ContactType)
   type?: ContactType
 
-  @ApiPropertyOptional({ description: 'Search by name, email, or message content' })
+  @ApiPropertyOptional({
+    description: 'Search by name, email, or message content'
+  })
   @IsOptional()
   @IsString()
   search?: string

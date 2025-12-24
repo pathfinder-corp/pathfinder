@@ -47,7 +47,9 @@ export class AssessmentResponseDto {
   originalAssessmentId?: string | null
 
   @Expose()
-  @ApiProperty({ description: 'Attempt number (1 for original, 2+ for retakes)' })
+  @ApiProperty({
+    description: 'Attempt number (1 for original, 2+ for retakes)'
+  })
   attemptNumber!: number
 
   @Expose()

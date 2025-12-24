@@ -107,4 +107,3 @@ export class CreateContactMessages1735200000000 implements MigrationInterface {
     `)
   }
 }
-

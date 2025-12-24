@@ -3,6 +3,7 @@ import { TypeOrmModule } from '@nestjs/typeorm'
 
 import { MentorProfilesModule } from '../mentor-profiles/mentor-profiles.module'
 import { NotificationsModule } from '../notifications/notifications.module'
+import { RoadmapContentPolicyService } from '../roadmaps/roadmap-content-policy.service'
 import { UsersModule } from '../users/users.module'
 import { ApplicationDocument } from './entities/application-document.entity'
 import { ApplicationStatusHistory } from './entities/application-status-history.entity'
@@ -27,7 +28,8 @@ import { DocumentUploadService } from './services/document-upload.service'
   providers: [
     MentorApplicationsService,
     ContentValidatorService,
-    DocumentUploadService
+    DocumentUploadService,
+    RoadmapContentPolicyService
   ],
   exports: [MentorApplicationsService, DocumentUploadService]
 })

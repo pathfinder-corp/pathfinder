@@ -68,6 +68,58 @@ export const envValidationSchema = Joi.object({
   MEETING_REMINDER_HOURS: Joi.number().min(1).max(168).default(24),
   IP_BASED_RATE_LIMIT_PER_WEEK: Joi.number().min(1).max(100).default(10),
 
+  // Content Validation Configuration
+  CONTENT_VALIDATION_SPAM_KEYWORDS: Joi.string()
+    .allow('')
+    .default(
+      'buy now,click here,limited offer,urgent,act now,win prize,free money,make money fast,work from home,guaranteed income'
+    ),
+  CONTENT_VALIDATION_MIN_QUALITY_SCORE: Joi.number()
+    .min(0)
+    .max(100)
+    .default(60),
+  CONTENT_VALIDATION_ENABLE_AI: Joi.boolean().default(true),
+  CONTENT_VALIDATION_ENABLE_CACHE: Joi.boolean().default(true),
+  CONTENT_VALIDATION_CACHE_TTL_SECONDS: Joi.number()
+    .min(60)
+    .max(86400)
+    .default(3600),
+  CONTENT_VALIDATION_MIN_TEXT_LENGTH: Joi.number()
+    .min(50)
+    .max(500)
+    .default(100),
+  CONTENT_VALIDATION_WEIGHT_REPEATED_CHARS: Joi.number()
+    .min(0)
+    .max(100)
+    .default(30),
+  CONTENT_VALIDATION_WEIGHT_SPAM_KEYWORD: Joi.number()
+    .min(0)
+    .max(100)
+    .default(20),
+  CONTENT_VALIDATION_WEIGHT_SUSPICIOUS_URLS: Joi.number()
+    .min(0)
+    .max(100)
+    .default(25),
+  CONTENT_VALIDATION_WEIGHT_LOW_DIVERSITY: Joi.number()
+    .min(0)
+    .max(100)
+    .default(20),
+  CONTENT_VALIDATION_WEIGHT_EXCESSIVE_SPECIAL_CHARS: Joi.number()
+    .min(0)
+    .max(100)
+    .default(15),
+  CONTENT_VALIDATION_WEIGHT_GIBBERISH: Joi.number().min(0).max(100).default(30),
+  CONTENT_VALIDATION_WEIGHT_TOO_SHORT: Joi.number().min(0).max(100).default(20),
+  CONTENT_VALIDATION_WEIGHT_AI_SPAM: Joi.number().min(0).max(100).default(40),
+  CONTENT_VALIDATION_WEIGHT_SENSITIVE_CONTENT: Joi.number()
+    .min(0)
+    .max(100)
+    .default(50),
+  CONTENT_VALIDATION_WEIGHT_ARRAY_FIELD_SPAM: Joi.number()
+    .min(0)
+    .max(100)
+    .default(25),
+
   UPLOAD_DOCUMENTS_PATH: Joi.string().default('./uploads/documents'),
   UPLOAD_MAX_FILE_SIZE_BYTES: Joi.number()
     .min(1024) // 1KB minimum
