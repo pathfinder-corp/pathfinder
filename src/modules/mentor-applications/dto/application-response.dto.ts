@@ -62,6 +62,10 @@ export class ApplicationUserDto {
   @ApiProperty()
   @Expose()
   lastName: string
+
+  @ApiPropertyOptional({ description: 'User avatar URL' })
+  @Expose()
+  avatar?: string
 }
 
 export class StatusHistoryDto {
