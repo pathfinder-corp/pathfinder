@@ -3,6 +3,10 @@ import { InjectRepository } from '@nestjs/typeorm'
 import { Repository } from 'typeorm'
 
 import { Assessment } from '../../assessments/entities/assessment.entity'
+import {
+  ContactMessage,
+  ContactStatus
+} from '../../contact/entities/contact-message.entity'
 import { Roadmap } from '../../roadmaps/entities/roadmap.entity'
 import { User } from '../../users/entities/user.entity'
 import {
@@ -20,7 +24,9 @@ export class AdminStatsService {
     @InjectRepository(Roadmap)
     private readonly roadmapsRepository: Repository<Roadmap>,
     @InjectRepository(Assessment)
-    private readonly assessmentsRepository: Repository<Assessment>
+    private readonly assessmentsRepository: Repository<Assessment>,
+    @InjectRepository(ContactMessage)
+    private readonly contactMessageRepository: Repository<ContactMessage>
   ) {}
 
   async getOverviewStats(): Promise<OverviewStatsDto> {
@@ -31,13 +37,20 @@ export class AdminStatsService {
       totalUsers,
       totalRoadmaps,
       totalAssessments,
+      totalContactMessages,
+      pendingContactMessages,
       newUsersLast7Days,
       newRoadmapsLast7Days,
-      newAssessmentsLast7Days
+      newAssessmentsLast7Days,
+      newContactMessagesLast7Days
     ] = await Promise.all([
       this.usersRepository.count(),
       this.roadmapsRepository.count(),
       this.assessmentsRepository.count(),
+      this.contactMessageRepository.count(),
+      this.contactMessageRepository.count({
+        where: { status: ContactStatus.PENDING }
+      }),
       this.usersRepository
         .createQueryBuilder('user')
         .where('user.createdAt >= :date', { date: sevenDaysAgo })
@@ -49,6 +62,10 @@ export class AdminStatsService {
       this.assessmentsRepository
         .createQueryBuilder('assessment')
         .where('assessment.createdAt >= :date', { date: sevenDaysAgo })
+        .getCount(),
+      this.contactMessageRepository
+        .createQueryBuilder('contact')
+        .where('contact.createdAt >= :date', { date: sevenDaysAgo })
         .getCount()
     ])
 
@@ -56,9 +73,12 @@ export class AdminStatsService {
       totalUsers,
       totalRoadmaps,
       totalAssessments,
+      totalContactMessages,
+      pendingContactMessages,
       newUsersLast7Days,
       newRoadmapsLast7Days,
-      newAssessmentsLast7Days
+      newAssessmentsLast7Days,
+      newContactMessagesLast7Days
     }
   }
 

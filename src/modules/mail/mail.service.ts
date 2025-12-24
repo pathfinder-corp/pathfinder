@@ -426,4 +426,200 @@ export class MailService {
 </table>
     `
   }
+
+  async sendContactResponseEmail(
+    to: string,
+    recipientName: string,
+    adminResponse: string,
+    originalMessage?: string,
+    subject?: string
+  ): Promise<void> {
+    if (!this.transporter) {
+      this.logger.warn(
+        'Attempted to send contact response email without a configured transporter'
+      )
+      return
+    }
+
+    const mailFrom = this.configService.get('mail.from')
+    const html = this.getContactResponseEmailTemplate(
+      recipientName,
+      adminResponse,
+      originalMessage,
+      subject
+    )
+
+    try {
+      await this.transporter.sendMail({
+        from: mailFrom,
+        to,
+        subject: subject
+          ? `Re: ${subject}`
+          : 'Response to your contact message',
+        html
+      })
+
+      this.logger.log(`Contact response email sent to ${to}`)
+    } catch (error) {
+      this.logger.error(`Failed to send email to ${to}:`, error)
+      // Don't throw error - email failure shouldn't break the response
+    }
+  }
+
+  private getContactResponseEmailTemplate(
+    recipientName: string,
+    adminResponse: string,
+    originalMessage?: string,
+    subject?: string
+  ): string {
+    const currentYear = new Date().getFullYear()
+
+    return `
+    <table
+      role="presentation"
+      class="container"
+      width="100%"
+      cellpadding="0"
+      cellspacing="0"
+    >
+      <tr>
+        <td align="center">
+          <table
+            role="presentation"
+            class="email-wrap"
+            width="100%"
+            cellpadding="0"
+            cellspacing="0"
+            style="max-width: 600px"
+          >
+            <tr>
+              <td style="background: #0b0b0b; padding: 28px; border-radius: 8px">
+                <table
+                  role="presentation"
+                  width="100%"
+                  cellpadding="0"
+                  cellspacing="0"
+                >
+                  <tr>
+                    <td
+                      style="
+                        color: #d6d6d6;
+                        font-size: 14px;
+                        line-height: 20px;
+                        padding-bottom: 12px;
+                      "
+                    >
+                      Hi ${recipientName},
+                    </td>
+                  </tr>
+
+                  <tr>
+                    <td
+                      style="
+                        color: #d6d6d6;
+                        font-size: 14px;
+                        line-height: 20px;
+                        padding-bottom: 16px;
+                      "
+                    >
+                      Thank you for contacting us. We have reviewed your message and here is our response:
+                    </td>
+                  </tr>
+
+                  ${originalMessage ? `
+                  <tr>
+                    <td style="padding-bottom: 12px;">
+                      <table
+                        role="presentation"
+                        width="100%"
+                        cellpadding="0"
+                        cellspacing="0"
+                        style="background: #1a1a1a; border-radius: 6px; border-left: 3px solid #4a4a4a;"
+                      >
+                        <tr>
+                          <td style="padding: 12px 16px;">
+                            <div style="color: #9b9b9b; font-size: 11px; font-weight: 500; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 6px;">
+                              Your original message:
+                            </div>
+                            <div style="color: #d6d6d6; font-size: 14px; line-height: 22px;">
+                              ${originalMessage.replace(/\n/g, '<br>')}
+                            </div>
+                          </td>
+                        </tr>
+                      </table>
+                    </td>
+                  </tr>
+                  ` : ''}
+
+                  <tr>
+                    <td>
+                      <table
+                        role="presentation"
+                        width="100%"
+                        cellpadding="0"
+                        cellspacing="0"
+                        style="background: #1a1a1a; border-radius: 6px; border-left: 3px solid #ffffff;"
+                      >
+                        <tr>
+                          <td style="padding: 12px 16px;">
+                            <div style="color: #9b9b9b; font-size: 11px; font-weight: 500; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 6px;">
+                              Our response:
+                            </div>
+                            <div style="color: #d6d6d6; font-size: 14px; line-height: 22px;">
+                              ${adminResponse.replace(/\n/g, '<br>')}
+                            </div>
+                          </td>
+                        </tr>
+                      </table>
+                    </td>
+                  </tr>
+
+                  <tr>
+                    <td
+                      style="
+                        color: #8f8f8f;
+                        font-size: 12px;
+                        line-height: 18px;
+                        padding-top: 16px;
+                      "
+                    >
+                      If you have any further questions or concerns, please don't hesitate to contact us again.
+                    </td>
+                  </tr>
+
+                  <tr>
+                    <td
+                      style="
+                        color: #8f8f8f;
+                        font-size: 12px;
+                        line-height: 18px;
+                        padding-top: 8px;
+                      "
+                    >
+                      Best regards,<br />
+                      Pathfinder Support Team
+                    </td>
+                  </tr>
+                </table>
+              </td>
+            </tr>
+
+            <tr>
+              <td
+                style="
+                  padding-top: 12px;
+                  text-align: center;
+                  color: #9b9b9b;
+                  font-size: 12px;
+                "
+              >
+                © ${currentYear} Pathfinder. All rights reserved.
+              </td>
+            </tr>
+          </table>
+        </td>
+      </tr>
+    </table>
+    `
+  }
 }

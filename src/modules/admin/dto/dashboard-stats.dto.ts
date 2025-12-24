@@ -11,6 +11,12 @@ export class OverviewStatsDto {
   totalAssessments: number
 
   @ApiProperty()
+  totalContactMessages: number
+
+  @ApiProperty()
+  pendingContactMessages: number
+
+  @ApiProperty()
   newUsersLast7Days: number
 
   @ApiProperty()
@@ -18,6 +24,9 @@ export class OverviewStatsDto {
 
   @ApiProperty()
   newAssessmentsLast7Days: number
+
+  @ApiProperty()
+  newContactMessagesLast7Days: number
 }
 
 export class UsersByRoleDto {
