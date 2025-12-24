@@ -1,6 +1,8 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger'
 import { Expose, Type } from 'class-transformer'
 
+import { MentorReviewStatsDto } from './review-response.dto'
+
 export class MentorUserDto {
   @ApiProperty()
   @Expose()
@@ -80,6 +82,11 @@ export class MentorProfileResponseDto {
   @ApiPropertyOptional()
   @Expose()
   maxMentees?: number
+
+  @ApiPropertyOptional({ type: MentorReviewStatsDto })
+  @Expose()
+  @Type(() => MentorReviewStatsDto)
+  reviewStats?: MentorReviewStatsDto
 
   @ApiProperty()
   @Expose()
