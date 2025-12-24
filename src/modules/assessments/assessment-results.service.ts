@@ -22,7 +22,6 @@ import {
   PerformanceSummary,
   SuggestedRoadmap
 } from './entities/assessment-result.entity'
-import { AssessmentShare } from './entities/assessment-share.entity'
 import { Assessment, AssessmentStatus } from './entities/assessment.entity'
 
 type GenerationSettings = Pick<
@@ -62,9 +61,7 @@ export class AssessmentResultsService {
     @InjectRepository(AssessmentResponse)
     private readonly responsesRepository: Repository<AssessmentResponse>,
     @InjectRepository(AssessmentResult)
-    private readonly resultsRepository: Repository<AssessmentResult>,
-    @InjectRepository(AssessmentShare)
-    private readonly sharesRepository: Repository<AssessmentShare>
+    private readonly resultsRepository: Repository<AssessmentResult>
   ) {
     const apiKey = this.configService.get<string>('genai.apiKey')
 
@@ -100,18 +97,7 @@ export class AssessmentResultsService {
     const isOwner = assessment.userId === userId
 
     if (!isOwner) {
-      if (!assessment.isSharedWithAll) {
-        const hasAccess = await this.sharesRepository.exist({
-          where: {
-            assessmentId,
-            sharedWithUserId: userId
-          }
-        })
-
-        if (!hasAccess) {
-          throw new NotFoundException('Assessment not found')
-        }
-      }
+      throw new NotFoundException('Assessment not found')
     }
 
     if (assessment.status === AssessmentStatus.COMPLETED) {
@@ -187,18 +173,7 @@ export class AssessmentResultsService {
     const isOwner = assessment.userId === userId
 
     if (!isOwner) {
-      if (!assessment.isSharedWithAll) {
-        const hasAccess = await this.sharesRepository.exist({
-          where: {
-            assessmentId,
-            sharedWithUserId: userId
-          }
-        })
-
-        if (!hasAccess) {
-          throw new NotFoundException('Assessment not found')
-        }
-      }
+      throw new NotFoundException('Assessment not found')
     }
 
     if (assessment.status !== AssessmentStatus.COMPLETED) {

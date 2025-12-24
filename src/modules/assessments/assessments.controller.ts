@@ -20,15 +20,10 @@ import { CurrentUser } from '../auth/decorators/current-user.decorator'
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard'
 import { User } from '../users/entities/user.entity'
 import { AssessmentResultsService } from './assessment-results.service'
-import { AssessmentSharingService } from './assessment-sharing.service'
 import { AssessmentsService } from './assessments.service'
 import { AssessmentResponseDto } from './dto/assessment-response.dto'
 import { AssessmentResultResponseDto } from './dto/assessment-result-response.dto'
 import { CreateAssessmentDto } from './dto/create-assessment.dto'
-import {
-  AssessmentShareStateDto,
-  ShareAssessmentDto
-} from './dto/share-assessment.dto'
 import { SubmitAnswerDto } from './dto/submit-answer.dto'
 
 @ApiTags('Assessments')
@@ -38,8 +33,7 @@ import { SubmitAnswerDto } from './dto/submit-answer.dto'
 export class AssessmentsController {
   constructor(
     private readonly assessmentsService: AssessmentsService,
-    private readonly resultsService: AssessmentResultsService,
-    private readonly sharingService: AssessmentSharingService
+    private readonly resultsService: AssessmentResultsService
   ) {}
 
   @Post()
@@ -91,7 +85,7 @@ export class AssessmentsController {
   @ApiOperation({
     summary: 'Get a specific assessment',
     description:
-      'Returns assessment details including questions (without answers). Accessible by owner or users with shared access.'
+      'Returns assessment details including questions (without answers). Accessible by owner only.'
   })
   @ApiResponse({
     status: 200,
@@ -219,81 +213,6 @@ export class AssessmentsController {
     @Param('id') assessmentId: string
   ): Promise<AssessmentResultResponseDto> {
     return await this.resultsService.getResults(user.id, assessmentId)
-  }
-
-  @Get(':id/share')
-  @ApiOperation({
-    summary: 'Get assessment sharing configuration',
-    description: 'Returns current sharing settings. Only accessible by owner.'
-  })
-  @ApiResponse({
-    status: 200,
-    description: 'Sharing configuration',
-    type: AssessmentShareStateDto
-  })
-  @ApiResponse({ status: 401, description: 'Unauthorized' })
-  @ApiResponse({ status: 404, description: 'Assessment not found' })
-  async getShareState(
-    @CurrentUser() user: User,
-    @Param('id') assessmentId: string
-  ): Promise<AssessmentShareStateDto> {
-    return await this.sharingService.getShareState(user.id, assessmentId)
-  }
-
-  @Post(':id/share')
-  @ApiOperation({
-    summary: 'Update assessment sharing settings',
-    description:
-      'Configure assessment sharing: make it public or share with specific users. Only accessible by owner.'
-  })
-  @ApiResponse({
-    status: 200,
-    description: 'Sharing settings updated',
-    type: AssessmentShareStateDto
-  })
-  @ApiResponse({
-    status: 400,
-    description: 'Invalid sharing configuration'
-  })
-  @ApiResponse({ status: 401, description: 'Unauthorized' })
-  @ApiResponse({ status: 404, description: 'Assessment or user not found' })
-  async updateShareSettings(
-    @CurrentUser() user: User,
-    @Param('id') assessmentId: string,
-    @Body() shareDto: ShareAssessmentDto
-  ): Promise<AssessmentShareStateDto> {
-    return await this.sharingService.updateShareSettings(
-      user.id,
-      assessmentId,
-      shareDto
-    )
-  }
-
-  @Delete(':id/share/:userId')
-  @HttpCode(HttpStatus.NO_CONTENT)
-  @ApiOperation({
-    summary: 'Revoke assessment access for a specific user',
-    description: 'Removes shared access for a user. Only accessible by owner.'
-  })
-  @ApiResponse({
-    status: 204,
-    description: 'Access revoked successfully'
-  })
-  @ApiResponse({ status: 401, description: 'Unauthorized' })
-  @ApiResponse({
-    status: 404,
-    description: 'Assessment or shared user not found'
-  })
-  async revokeShare(
-    @CurrentUser() user: User,
-    @Param('id') assessmentId: string,
-    @Param('userId') sharedWithUserId: string
-  ): Promise<void> {
-    await this.sharingService.revokeShare(
-      user.id,
-      assessmentId,
-      sharedWithUserId
-    )
   }
 
   @Delete(':id')

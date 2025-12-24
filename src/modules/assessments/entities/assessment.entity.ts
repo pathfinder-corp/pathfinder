@@ -14,7 +14,6 @@ import { User } from '../../users/entities/user.entity'
 import { AssessmentQuestion } from './assessment-question.entity'
 import { AssessmentResponse } from './assessment-response.entity'
 import { AssessmentResult } from './assessment-result.entity'
-import { AssessmentShare } from './assessment-share.entity'
 
 export enum AssessmentDifficulty {
   EASY = 'easy',
@@ -62,9 +61,6 @@ export class Assessment {
   })
   status!: AssessmentStatus
 
-  @Column({ name: 'is_shared_with_all', type: 'boolean', default: false })
-  isSharedWithAll!: boolean
-
   @OneToMany(() => AssessmentQuestion, (question) => question.assessment, {
     cascade: true
   })
@@ -75,9 +71,6 @@ export class Assessment {
 
   @OneToOne(() => AssessmentResult, (result) => result.assessment)
   result?: AssessmentResult
-
-  @OneToMany(() => AssessmentShare, (share) => share.assessment)
-  shares?: AssessmentShare[]
 
   @CreateDateColumn({ name: 'created_at', type: 'timestamptz' })
   createdAt!: Date

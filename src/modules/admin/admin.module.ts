@@ -4,7 +4,6 @@ import { TypeOrmModule } from '@nestjs/typeorm'
 import { AuditLog } from '../../common/entities/audit-log.entity'
 import { AssessmentResponse } from '../assessments/entities/assessment-response.entity'
 import { AssessmentResult } from '../assessments/entities/assessment-result.entity'
-import { AssessmentShare } from '../assessments/entities/assessment-share.entity'
 import { Assessment } from '../assessments/entities/assessment.entity'
 import { MentorApplicationsModule } from '../mentor-applications/mentor-applications.module'
 import { MentorProfilesModule } from '../mentor-profiles/mentor-profiles.module'
@@ -31,7 +30,6 @@ import { AdminUsersService } from './services/admin-users.service'
       Roadmap,
       RoadmapShare,
       Assessment,
-      AssessmentShare,
       AssessmentResponse,
       AssessmentResult,
       AuditLog

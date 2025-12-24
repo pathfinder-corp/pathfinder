@@ -57,10 +57,6 @@ export class AssessmentResponseDto {
   status!: AssessmentStatus
 
   @Expose()
-  @ApiProperty({ description: 'Whether assessment is shared publicly' })
-  isSharedWithAll!: boolean
-
-  @Expose()
   @ApiProperty({ description: 'Number of questions answered so far' })
   answeredCount!: number
 

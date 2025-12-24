@@ -24,7 +24,6 @@ import {
   QuestionResource
 } from './entities/assessment-question.entity'
 import { AssessmentResponse } from './entities/assessment-response.entity'
-import { AssessmentShare } from './entities/assessment-share.entity'
 import {
   Assessment,
   AssessmentDifficulty,
@@ -79,8 +78,6 @@ export class AssessmentsService {
     private readonly questionsRepository: Repository<AssessmentQuestion>,
     @InjectRepository(AssessmentResponse)
     private readonly responsesRepository: Repository<AssessmentResponse>,
-    @InjectRepository(AssessmentShare)
-    private readonly sharesRepository: Repository<AssessmentShare>,
     private readonly contentPolicy: AssessmentContentPolicyService
   ) {
     const apiKey = this.configService.get<string>('genai.apiKey')
@@ -155,8 +152,7 @@ export class AssessmentsService {
         domain: createDto.domain,
         difficulty,
         questionCount,
-        status: AssessmentStatus.PENDING,
-        isSharedWithAll: false
+        status: AssessmentStatus.PENDING
       })
 
       const savedAssessment = await this.assessmentsRepository.save(assessment)
@@ -211,18 +207,7 @@ export class AssessmentsService {
     const isOwner = assessment.userId === userId
 
     if (!isOwner) {
-      if (!assessment.isSharedWithAll) {
-        const hasAccess = await this.sharesRepository.exist({
-          where: {
-            assessmentId,
-            sharedWithUserId: userId
-          }
-        })
-
-        if (!hasAccess) {
-          throw new NotFoundException('Assessment not found')
-        }
-      }
+      throw new NotFoundException('Assessment not found')
     }
 
     const answeredCount = await this.responsesRepository.count({
@@ -285,18 +270,7 @@ export class AssessmentsService {
     const isOwner = assessment.userId === userId
 
     if (!isOwner) {
-      if (!assessment.isSharedWithAll) {
-        const hasAccess = await this.sharesRepository.exist({
-          where: {
-            assessmentId,
-            sharedWithUserId: userId
-          }
-        })
-
-        if (!hasAccess) {
-          throw new NotFoundException('Assessment not found')
-        }
-      }
+      throw new NotFoundException('Assessment not found')
     }
 
     if (assessment.status === AssessmentStatus.COMPLETED) {
@@ -333,18 +307,7 @@ export class AssessmentsService {
     const isOwner = assessment.userId === userId
 
     if (!isOwner) {
-      if (!assessment.isSharedWithAll) {
-        const hasAccess = await this.sharesRepository.exist({
-          where: {
-            assessmentId,
-            sharedWithUserId: userId
-          }
-        })
-
-        if (!hasAccess) {
-          throw new NotFoundException('Assessment not found')
-        }
-      }
+      throw new NotFoundException('Assessment not found')
     }
 
     if (assessment.status === AssessmentStatus.COMPLETED) {
@@ -595,7 +558,6 @@ Ensure all strings use double quotes and the JSON is strictly valid.`
         difficulty: assessment.difficulty,
         questionCount: assessment.questionCount,
         status: assessment.status,
-        isSharedWithAll: assessment.isSharedWithAll,
         answeredCount,
         questions: questionDtos,
         createdAt: assessment.createdAt.toISOString(),

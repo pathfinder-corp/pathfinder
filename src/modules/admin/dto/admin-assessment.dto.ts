@@ -1,12 +1,6 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger'
 import { Expose, Type } from 'class-transformer'
-import {
-  IsBoolean,
-  IsEnum,
-  IsOptional,
-  IsString,
-  IsUUID
-} from 'class-validator'
+import { IsEnum, IsOptional, IsString, IsUUID } from 'class-validator'
 
 import {
   AssessmentDifficulty,
@@ -34,12 +28,6 @@ export class AdminAssessmentQueryDto extends PaginationQueryDto {
   @IsOptional()
   @IsEnum(AssessmentDifficulty)
   difficulty?: AssessmentDifficulty
-
-  @ApiPropertyOptional({ description: 'Filter by shared status' })
-  @IsOptional()
-  @IsBoolean()
-  @Type(() => Boolean)
-  isSharedWithAll?: boolean
 }
 
 export class AssessmentOwnerDto {
@@ -83,10 +71,6 @@ export class AdminAssessmentResponseDto {
 
   @ApiProperty()
   @Expose()
-  isSharedWithAll: boolean
-
-  @ApiProperty()
-  @Expose()
   @Type(() => Date)
   createdAt: Date
 
@@ -105,10 +89,6 @@ export class AdminAssessmentDetailResponseDto extends AdminAssessmentResponseDto
   @ApiProperty()
   @Expose()
   answeredCount: number
-
-  @ApiProperty()
-  @Expose()
-  shareCount: number
 
   @ApiPropertyOptional()
   @Expose()

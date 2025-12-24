@@ -5,7 +5,6 @@ import { Repository } from 'typeorm'
 
 import { AssessmentResponse } from '../../assessments/entities/assessment-response.entity'
 import { AssessmentResult } from '../../assessments/entities/assessment-result.entity'
-import { AssessmentShare } from '../../assessments/entities/assessment-share.entity'
 import { Assessment } from '../../assessments/entities/assessment.entity'
 import {
   AdminAssessmentDetailResponseDto,
@@ -20,8 +19,6 @@ export class AdminAssessmentsService {
   constructor(
     @InjectRepository(Assessment)
     private readonly assessmentsRepository: Repository<Assessment>,
-    @InjectRepository(AssessmentShare)
-    private readonly assessmentSharesRepository: Repository<AssessmentShare>,
     @InjectRepository(AssessmentResponse)
     private readonly assessmentResponsesRepository: Repository<AssessmentResponse>,
     @InjectRepository(AssessmentResult)
@@ -52,12 +49,6 @@ export class AdminAssessmentsService {
     if (query.difficulty) {
       qb.andWhere('assessment.difficulty = :difficulty', {
         difficulty: query.difficulty
-      })
-    }
-
-    if (query.isSharedWithAll !== undefined) {
-      qb.andWhere('assessment.isSharedWithAll = :isSharedWithAll', {
-        isSharedWithAll: query.isSharedWithAll
       })
     }
 
@@ -101,8 +92,7 @@ export class AdminAssessmentsService {
       throw new NotFoundException(`Assessment with ID ${id} not found`)
     }
 
-    const [shareCount, answeredCount, result] = await Promise.all([
-      this.assessmentSharesRepository.count({ where: { assessmentId: id } }),
+    const [answeredCount, result] = await Promise.all([
       this.assessmentResponsesRepository.count({ where: { assessmentId: id } }),
       this.assessmentResultsRepository.findOne({ where: { assessmentId: id } })
     ])
@@ -115,11 +105,9 @@ export class AdminAssessmentsService {
         difficulty: assessment.difficulty,
         questionCount: assessment.questionCount,
         status: assessment.status,
-        isSharedWithAll: assessment.isSharedWithAll,
         createdAt: assessment.createdAt,
         updatedAt: assessment.updatedAt,
         owner: this.toOwnerDto(assessment.user),
-        shareCount,
         answeredCount,
         result: result
           ? {
@@ -151,7 +139,6 @@ export class AdminAssessmentsService {
         difficulty: assessment.difficulty,
         questionCount: assessment.questionCount,
         status: assessment.status,
-        isSharedWithAll: assessment.isSharedWithAll,
         createdAt: assessment.createdAt,
         updatedAt: assessment.updatedAt,
         owner: this.toOwnerDto(assessment.user)
