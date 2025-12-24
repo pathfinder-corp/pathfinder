@@ -251,7 +251,7 @@ export class DocumentUploadService {
   async getDocument(documentId: string): Promise<ApplicationDocument> {
     const document = await this.documentRepository.findOne({
       where: { id: documentId },
-      relations: ['application']
+      relations: ['application', 'uploader']
     })
 
     if (!document) {
