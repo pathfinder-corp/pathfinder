@@ -224,25 +224,30 @@ export class ContentValidatorService {
     try {
       const prompt = `Analyze the following mentor application content to determine if it represents a legitimate, professional mentor candidate.
 
-    Evaluate for:
-    1. Professional credibility and genuine expertise
-    2. Spam, promotional content, or low-quality submissions
-    3. Inappropriate, offensive, or unprofessional content
-    4. Authentic motivation to mentor (not self-promotion or sales)
+      Evaluate for:
+      1. Professional credibility and genuine expertise
+      2. Spam, promotional content, or low-quality submissions
+      3. Inappropriate, offensive, or unprofessional content
+      4. Authentic motivation to mentor (not self-promotion or sales)
 
-    Content:
-    Headline: ${dto.headline}
-    Bio: ${dto.bio}
-    Motivation: ${dto.motivation}
-    Expertise: ${dto.expertise?.join(', ') || 'N/A'}
-    Skills: ${dto.skills?.join(', ') || 'N/A'}
+      Content:
+      Headline: ${dto.headline}
+      Bio: ${dto.bio}
+      Motivation: ${dto.motivation}
+      Expertise: ${dto.expertise?.join(', ') || 'N/A'}
+      Skills: ${dto.skills?.join(', ') || 'N/A'}
+      Industries: ${dto.industries?.join(', ') || 'N/A'}
+      Languages: ${dto.languages?.join(', ') || 'N/A'}
+      Years of Experience: ${dto.yearsExperience || 'N/A'}
+      LinkedIn URL: ${dto.linkedinUrl || 'N/A'}
+      Portfolio URL: ${dto.portfolioUrl || 'N/A'}
 
-    Respond in JSON format:
-    {
-      "isSpam": boolean (true if content is spam, inappropriate, or unprofessional),
-      "confidence": number (0-1),
-      "reasoning": "brief explanation of why this is or isn't a professional mentor application"
-    }`
+      Respond in JSON format:
+      {
+        "isSpam": boolean (true if content is spam, inappropriate, or unprofessional),
+        "confidence": number (0-1),
+        "reasoning": "brief explanation of why this is or isn't a professional mentor application"
+      }`
 
       const response = await this.genaiClient.models.generateContent({
         model: this.genaiModel,
