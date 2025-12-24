@@ -41,6 +41,16 @@ export class AssessmentResponseDto {
   id!: string
 
   @Expose()
+  @ApiPropertyOptional({
+    description: 'Original assessment UUID if this is a retake'
+  })
+  originalAssessmentId?: string | null
+
+  @Expose()
+  @ApiProperty({ description: 'Attempt number (1 for original, 2+ for retakes)' })
+  attemptNumber!: number
+
+  @Expose()
   @ApiProperty({ description: 'Domain or topic being assessed' })
   domain!: string
 

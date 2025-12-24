@@ -14,6 +14,10 @@ import { Repository } from 'typeorm'
 import { User } from '../users/entities/user.entity'
 import { AssessmentContentPolicyService } from './assessment-content-policy.service'
 import {
+  AssessmentAttemptSummaryDto,
+  AssessmentHistoryResponseDto
+} from './dto/assessment-history-response.dto'
+import {
   AssessmentQuestionDto,
   AssessmentResponseDto
 } from './dto/assessment-response.dto'
@@ -24,6 +28,7 @@ import {
   QuestionResource
 } from './entities/assessment-question.entity'
 import { AssessmentResponse } from './entities/assessment-response.entity'
+import { AssessmentResult } from './entities/assessment-result.entity'
 import {
   Assessment,
   AssessmentDifficulty,
@@ -78,6 +83,8 @@ export class AssessmentsService {
     private readonly questionsRepository: Repository<AssessmentQuestion>,
     @InjectRepository(AssessmentResponse)
     private readonly responsesRepository: Repository<AssessmentResponse>,
+    @InjectRepository(AssessmentResult)
+    private readonly resultsRepository: Repository<AssessmentResult>,
     private readonly contentPolicy: AssessmentContentPolicyService
   ) {
     const apiKey = this.configService.get<string>('genai.apiKey')
@@ -358,6 +365,173 @@ export class AssessmentsService {
     }
   }
 
+  async retakeAssessment(
+    userId: string,
+    assessmentId: string
+  ): Promise<AssessmentResponseDto> {
+    // Find the original assessment
+    const originalAssessment = await this.assessmentsRepository.findOne({
+      where: { id: assessmentId },
+      relations: ['questions']
+    })
+
+    if (!originalAssessment) {
+      throw new NotFoundException('Assessment not found')
+    }
+
+    if (originalAssessment.userId !== userId) {
+      throw new NotFoundException('Assessment not found')
+    }
+
+    // Get the root assessment ID (in case this is already a retake)
+    const rootAssessmentId =
+      originalAssessment.originalAssessmentId || originalAssessment.id
+
+    // Find all attempts to determine the next attempt number
+    const allAttempts = await this.assessmentsRepository.find({
+      where: [
+        { id: rootAssessmentId },
+        { originalAssessmentId: rootAssessmentId }
+      ],
+      order: { attemptNumber: 'DESC' }
+    })
+
+    const nextAttemptNumber = allAttempts.length > 0 ? allAttempts[0].attemptNumber + 1 : 2
+
+    // Create new assessment with same domain/difficulty but as a retake
+    const newAssessment = this.assessmentsRepository.create({
+      userId,
+      domain: originalAssessment.domain,
+      difficulty: originalAssessment.difficulty,
+      questionCount: originalAssessment.questionCount,
+      status: AssessmentStatus.PENDING,
+      originalAssessmentId: rootAssessmentId,
+      attemptNumber: nextAttemptNumber
+    })
+
+    await this.assessmentsRepository.save(newAssessment)
+
+    // Copy questions from the original assessment with identical content
+    const copiedQuestions = originalAssessment.questions?.map((q) =>
+      this.questionsRepository.create({
+        assessmentId: newAssessment.id,
+        questionText: q.questionText,
+        options: q.options,
+        correctAnswerIndex: q.correctAnswerIndex,
+        explanation: q.explanation,
+        resources: q.resources,
+        orderIndex: q.orderIndex
+      })
+    )
+
+    if (copiedQuestions && copiedQuestions.length > 0) {
+      await this.questionsRepository.save(copiedQuestions)
+      newAssessment.questions = copiedQuestions
+    }
+
+    return this.toAssessmentResponse(newAssessment, copiedQuestions || [], 0)
+  }
+
+  async getAssessmentHistory(
+    userId: string,
+    assessmentId: string
+  ): Promise<AssessmentHistoryResponseDto> {
+    // Find the assessment
+    const assessment = await this.assessmentsRepository.findOne({
+      where: { id: assessmentId },
+      relations: ['questions']
+    })
+
+    if (!assessment) {
+      throw new NotFoundException('Assessment not found')
+    }
+
+    if (assessment.userId !== userId) {
+      throw new NotFoundException('Assessment not found')
+    }
+
+    // Get the root assessment ID
+    const rootAssessmentId =
+      assessment.originalAssessmentId || assessment.id
+
+    // Find all attempts
+    const allAttempts = await this.assessmentsRepository.find({
+      where: [
+        { id: rootAssessmentId },
+        { originalAssessmentId: rootAssessmentId }
+      ],
+      order: { attemptNumber: 'ASC' }
+    })
+
+    if (allAttempts.length === 0) {
+      throw new NotFoundException('Assessment not found')
+    }
+
+    // Get all assessment IDs
+    const assessmentIds = allAttempts.map((a) => a.id)
+
+    // Fetch all results for these assessments
+    const results = await this.resultsRepository.find({
+      where: assessmentIds.map((id) => ({ assessmentId: id })),
+      order: { completedAt: 'ASC' }
+    })
+
+    // Create a map of assessment ID to result
+    const resultsMap = new Map(
+      results.map((r) => [r.assessmentId, r])
+    )
+
+    // Build attempt summaries
+    const attemptSummaries: AssessmentAttemptSummaryDto[] = allAttempts.map(
+      (attempt) => {
+        const result = resultsMap.get(attempt.id)
+
+        return plainToInstance(
+          AssessmentAttemptSummaryDto,
+          {
+            id: attempt.id,
+            attemptNumber: attempt.attemptNumber,
+            status: attempt.status,
+            score: result?.score ?? null,
+            correctCount: result?.correctCount ?? null,
+            totalQuestions: attempt.questionCount,
+            createdAt: attempt.createdAt.toISOString(),
+            completedAt: result?.completedAt?.toISOString() ?? null
+          },
+          { excludeExtraneousValues: true }
+        )
+      }
+    )
+
+    // Calculate statistics
+    const completedResults = results.filter((r) => r.score != null)
+    const bestScore =
+      completedResults.length > 0
+        ? Math.max(...completedResults.map((r) => Number(r.score)))
+        : null
+    const latestCompletedResult = completedResults[completedResults.length - 1]
+    const latestScore = latestCompletedResult
+      ? Number(latestCompletedResult.score)
+      : null
+
+    return plainToInstance(
+      AssessmentHistoryResponseDto,
+      {
+        originalAssessmentId: rootAssessmentId,
+        domain: allAttempts[0].domain,
+        difficulty: allAttempts[0].difficulty,
+        totalAttempts: allAttempts.length,
+        attempts: attemptSummaries,
+        bestScore,
+        latestScore,
+        firstAttemptDate: allAttempts[0].createdAt.toISOString(),
+        latestAttemptDate:
+          allAttempts[allAttempts.length - 1].createdAt.toISOString()
+      },
+      { excludeExtraneousValues: true }
+    )
+  }
+
   private buildPrompt(
     domain: string,
     difficulty: AssessmentDifficulty,
@@ -554,6 +728,8 @@ Ensure all strings use double quotes and the JSON is strictly valid.`
       AssessmentResponseDto,
       {
         id: assessment.id,
+        originalAssessmentId: assessment.originalAssessmentId ?? null,
+        attemptNumber: assessment.attemptNumber,
         domain: assessment.domain,
         difficulty: assessment.difficulty,
         questionCount: assessment.questionCount,

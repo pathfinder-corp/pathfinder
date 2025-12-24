@@ -21,6 +21,7 @@ import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard'
 import { User } from '../users/entities/user.entity'
 import { AssessmentResultsService } from './assessment-results.service'
 import { AssessmentsService } from './assessments.service'
+import { AssessmentHistoryResponseDto } from './dto/assessment-history-response.dto'
 import { AssessmentResponseDto } from './dto/assessment-response.dto'
 import { AssessmentResultResponseDto } from './dto/assessment-result-response.dto'
 import { CreateAssessmentDto } from './dto/create-assessment.dto'
@@ -213,6 +214,49 @@ export class AssessmentsController {
     @Param('id') assessmentId: string
   ): Promise<AssessmentResultResponseDto> {
     return await this.resultsService.getResults(user.id, assessmentId)
+  }
+
+  @Post(':id/retake')
+  @ApiOperation({
+    summary: 'Create a retake of an existing assessment',
+    description:
+      'Creates a new attempt for an existing assessment with identical questions. The new assessment will be linked to the original and assigned the next attempt number.'
+  })
+  @ApiResponse({
+    status: 201,
+    description: 'Retake assessment created successfully',
+    type: AssessmentResponseDto
+  })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  @ApiResponse({ status: 404, description: 'Assessment not found' })
+  async retakeAssessment(
+    @CurrentUser() user: User,
+    @Param('id') assessmentId: string
+  ): Promise<AssessmentResponseDto> {
+    return await this.assessmentsService.retakeAssessment(user.id, assessmentId)
+  }
+
+  @Get(':id/history')
+  @ApiOperation({
+    summary: 'Get assessment history',
+    description:
+      'Returns all attempts for an assessment including attempt numbers, scores, and completion dates. Shows performance trends across multiple retakes.'
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Assessment history with all attempts',
+    type: AssessmentHistoryResponseDto
+  })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  @ApiResponse({ status: 404, description: 'Assessment not found' })
+  async getAssessmentHistory(
+    @CurrentUser() user: User,
+    @Param('id') assessmentId: string
+  ): Promise<AssessmentHistoryResponseDto> {
+    return await this.assessmentsService.getAssessmentHistory(
+      user.id,
+      assessmentId
+    )
   }
 
   @Delete(':id')

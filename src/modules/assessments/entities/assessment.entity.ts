@@ -35,6 +35,16 @@ export class Assessment {
   @Column({ name: 'user_id', type: 'uuid' })
   userId!: string
 
+  @Column({ name: 'original_assessment_id', type: 'uuid', nullable: true })
+  originalAssessmentId?: string | null
+
+  @ManyToOne(() => Assessment, { nullable: true, onDelete: 'CASCADE' })
+  @JoinColumn({ name: 'original_assessment_id' })
+  originalAssessment?: Assessment | null
+
+  @Column({ name: 'attempt_number', type: 'int', default: 1 })
+  attemptNumber!: number
+
   @ManyToOne(() => User, (user) => user.assessments, {
     onDelete: 'CASCADE'
   })

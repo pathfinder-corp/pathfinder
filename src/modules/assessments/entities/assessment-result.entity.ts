@@ -26,7 +26,7 @@ export class AssessmentResult {
   @PrimaryGeneratedColumn('uuid')
   id!: string
 
-  @Column({ name: 'assessment_id', type: 'uuid', unique: true })
+  @Column({ name: 'assessment_id', type: 'uuid' })
   assessmentId!: string
 
   @OneToOne(() => Assessment, (assessment) => assessment.result, {
