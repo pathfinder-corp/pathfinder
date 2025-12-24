@@ -22,11 +22,11 @@ export class AdminListMentorsQueryDto {
   @IsBoolean()
   isActive?: boolean
 
-  @ApiPropertyOptional({ description: 'Filter by accepting mentees status' })
+  @ApiPropertyOptional({ description: 'Filter by accepting students status' })
   @IsOptional()
   @Transform(({ value }) => value === 'true' || value === true)
   @IsBoolean()
-  isAcceptingMentees?: boolean
+  isAcceptingStudents?: boolean
 
   @ApiPropertyOptional({ description: 'Search by name, headline, bio' })
   @IsOptional()
@@ -63,10 +63,10 @@ export class AdminListMentorshipsQueryDto {
   @IsUUID()
   mentorId?: string
 
-  @ApiPropertyOptional({ description: 'Filter by mentee ID' })
+  @ApiPropertyOptional({ description: 'Filter by student ID' })
   @IsOptional()
   @IsUUID()
-  menteeId?: string
+  studentId?: string
 
   @ApiPropertyOptional({
     description: 'Filter by status',

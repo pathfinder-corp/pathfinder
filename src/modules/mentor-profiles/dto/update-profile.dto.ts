@@ -74,12 +74,12 @@ export class UpdateMentorProfileDto {
   @ApiPropertyOptional()
   @IsOptional()
   @IsBoolean()
-  isAcceptingMentees?: boolean
+  isAcceptingStudents?: boolean
 
   @ApiPropertyOptional({ minimum: 1, maximum: 50 })
   @IsOptional()
   @IsInt()
   @Min(1)
   @Max(50)
-  maxMentees?: number
+  maxStudents?: number
 }

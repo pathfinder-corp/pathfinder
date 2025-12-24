@@ -69,7 +69,7 @@ export class MentorProfilesService {
       industries: [],
       languages: [],
       isActive: true,
-      isAcceptingMentees: true,
+      isAcceptingStudents: true,
       ...initialData
     })
 
@@ -143,9 +143,9 @@ export class MentorProfilesService {
     if (dto.linkedinUrl !== undefined) updateData.linkedinUrl = dto.linkedinUrl
     if (dto.portfolioUrl !== undefined)
       updateData.portfolioUrl = dto.portfolioUrl
-    if (dto.isAcceptingMentees !== undefined)
-      updateData.isAcceptingMentees = dto.isAcceptingMentees
-    if (dto.maxMentees !== undefined) updateData.maxMentees = dto.maxMentees
+    if (dto.isAcceptingStudents !== undefined)
+      updateData.isAcceptingStudents = dto.isAcceptingStudents
+    if (dto.maxStudents !== undefined) updateData.maxStudents = dto.maxStudents
 
     await this.profileRepository.update({ id: profile.id }, updateData)
 
@@ -178,7 +178,7 @@ export class MentorProfilesService {
       .createQueryBuilder('profile')
       .leftJoinAndSelect('profile.user', 'user')
       .where('profile.is_active = true')
-      .andWhere('profile.is_accepting_mentees = true')
+      .andWhere('profile.is_accepting_students = true')
       .andWhere('user.role = :role', { role: UserRole.MENTOR })
       .andWhere('user.status = :status', { status: 'active' })
 
@@ -244,7 +244,7 @@ export class MentorProfilesService {
    */
   async findAllForAdmin(query: {
     isActive?: boolean
-    isAcceptingMentees?: boolean
+    isAcceptingStudents?: boolean
     search?: string
     skip: number
     take: number
@@ -258,9 +258,9 @@ export class MentorProfilesService {
       qb.andWhere('profile.is_active = :isActive', { isActive: query.isActive })
     }
 
-    if (query.isAcceptingMentees !== undefined) {
-      qb.andWhere('profile.is_accepting_mentees = :isAccepting', {
-        isAccepting: query.isAcceptingMentees
+    if (query.isAcceptingStudents !== undefined) {
+      qb.andWhere('profile.is_accepting_students = :isAccepting', {
+        isAccepting: query.isAcceptingStudents
       })
     }
 
@@ -294,7 +294,7 @@ export class MentorProfilesService {
     total: number
     active: number
     inactive: number
-    acceptingMentees: number
+    acceptingStudents: number
   }> {
     const total = await this.profileRepository.count()
 
@@ -302,15 +302,15 @@ export class MentorProfilesService {
       where: { isActive: true }
     })
 
-    const acceptingMentees = await this.profileRepository.count({
-      where: { isActive: true, isAcceptingMentees: true }
+    const acceptingStudents = await this.profileRepository.count({
+      where: { isActive: true, isAcceptingStudents: true }
     })
 
     return {
       total,
       active,
       inactive: total - active,
-      acceptingMentees
+      acceptingStudents
     }
   }
 
@@ -587,7 +587,7 @@ export class MentorProfilesService {
     // Update allowed fields
     const updateData: Partial<ApplicationDocument> = {}
 
-    if (dto.type !== undefined) updateData.type = dto.type as DocumentType
+    if (dto.type !== undefined) updateData.type = dto.type
     if (dto.title !== undefined) updateData.title = dto.title
     if (dto.description !== undefined) updateData.description = dto.description
     if (dto.issuedYear !== undefined) updateData.issuedYear = dto.issuedYear

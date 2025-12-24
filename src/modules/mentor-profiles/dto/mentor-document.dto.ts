@@ -200,11 +200,11 @@ export class MentorProfileWithDocumentsDto {
 
   @ApiProperty()
   @Expose()
-  isAcceptingMentees: boolean
+  isAcceptingStudents: boolean
 
   @ApiPropertyOptional()
   @Expose()
-  maxMentees?: number
+  maxStudents?: number
 
   @ApiProperty({ type: [MentorDocumentDto], description: 'Verified documents' })
   @Expose()

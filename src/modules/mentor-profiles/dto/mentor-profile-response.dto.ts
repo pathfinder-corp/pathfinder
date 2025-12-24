@@ -77,11 +77,11 @@ export class MentorProfileResponseDto {
 
   @ApiProperty()
   @Expose()
-  isAcceptingMentees: boolean
+  isAcceptingStudents: boolean
 
   @ApiPropertyOptional()
   @Expose()
-  maxMentees?: number
+  maxStudents?: number
 
   @ApiPropertyOptional({ type: MentorReviewStatsDto })
   @Expose()

@@ -168,7 +168,7 @@ export class AdminMentorshipController {
     const { mentors, total } = await this.mentorProfilesService.findAllForAdmin(
       {
         isActive: query.isActive,
-        isAcceptingMentees: query.isAcceptingMentees,
+        isAcceptingStudents: query.isAcceptingStudents,
         search: query.search,
         skip: query.skip,
         take: query.take
@@ -200,7 +200,7 @@ export class AdminMentorshipController {
     total: number
     active: number
     inactive: number
-    acceptingMentees: number
+    acceptingStudents: number
   }> {
     return this.mentorProfilesService.getMentorStats()
   }
@@ -278,7 +278,7 @@ export class AdminMentorshipController {
     const { mentorships, total } =
       await this.mentorshipsService.findAllForAdmin({
         mentorId: query.mentorId,
-        menteeId: query.menteeId,
+        studentId: query.studentId,
         status: query.status,
         skip: query.skip,
         take: query.take

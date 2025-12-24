@@ -48,11 +48,11 @@ export class MentorshipRequestsService {
     )
 
     if (!mentorProfile || !mentorProfile.isActive) {
-      throw new NotFoundException('Mentor not found or not accepting mentees')
+      throw new NotFoundException('Mentor not found or not accepting students')
     }
 
-    if (!mentorProfile.isAcceptingMentees) {
-      throw new BadRequestException('Mentor is not currently accepting mentees')
+    if (!mentorProfile.isAcceptingStudents) {
+      throw new BadRequestException('Mentor is not currently accepting students')
     }
 
     // Check for existing pending request to same mentor

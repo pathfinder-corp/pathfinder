@@ -139,7 +139,7 @@ export class MentorshipsService {
    */
   async findAllForAdmin(query: {
     mentorId?: string
-    menteeId?: string
+    studentId?: string
     status?: string
     skip: number
     take: number
@@ -155,9 +155,9 @@ export class MentorshipsService {
       })
     }
 
-    if (query.menteeId) {
-      qb.andWhere('mentorship.student_id = :menteeId', {
-        menteeId: query.menteeId
+    if (query.studentId) {
+      qb.andWhere('mentorship.student_id = :studentId', {
+        studentId: query.studentId
       })
     }
 

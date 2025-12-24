@@ -54,11 +54,11 @@ export class MentorProfile {
   @Column({ name: 'is_active', default: true })
   isActive: boolean
 
-  @Column({ name: 'is_accepting_mentees', default: true })
-  isAcceptingMentees: boolean
+  @Column({ name: 'is_accepting_students', default: true })
+  isAcceptingStudents: boolean
 
-  @Column({ name: 'max_mentees', type: 'int', nullable: true })
-  maxMentees?: number
+  @Column({ name: 'max_students', type: 'int', nullable: true })
+  maxStudents?: number
 
   @CreateDateColumn({ name: 'created_at', type: 'timestamptz' })
   createdAt: Date
