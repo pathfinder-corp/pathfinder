@@ -120,53 +120,6 @@ describe('Mentorship Flow (e2e)', () => {
     })
   })
 
-  describe('Student Preferences', () => {
-    it('should set student preferences', async () => {
-      const response = await request(app.getHttpServer())
-        .put('/student-preferences')
-        .set('Authorization', `Bearer ${studentToken}`)
-        .send({
-          domains: ['Software Engineering', 'Web Development'],
-          goals: ['Get promoted to senior level', 'Learn system design'],
-          skills: ['TypeScript', 'React', 'Node.js'],
-          languages: ['English'],
-          minYearsExperience: 5,
-          industries: ['FinTech']
-        })
-        .expect(200)
-
-      expect(response.body).toHaveProperty('id')
-      expect(response.body.version).toBe(1)
-    })
-
-    it('should get latest preferences', async () => {
-      const response = await request(app.getHttpServer())
-        .get('/student-preferences')
-        .set('Authorization', `Bearer ${studentToken}`)
-        .expect(200)
-
-      expect(response.body).toHaveProperty('preferences')
-      expect(response.body.preferences.domains).toContain(
-        'Software Engineering'
-      )
-    })
-
-    it('should create new version when updating preferences', async () => {
-      const response = await request(app.getHttpServer())
-        .put('/student-preferences')
-        .set('Authorization', `Bearer ${studentToken}`)
-        .send({
-          domains: ['Software Engineering', 'Machine Learning'],
-          goals: ['Get promoted to senior level'],
-          skills: ['TypeScript', 'Python'],
-          languages: ['English']
-        })
-        .expect(200)
-
-      expect(response.body.version).toBe(2)
-    })
-  })
-
   describe('Notifications', () => {
     it('should get notifications', async () => {
       const response = await request(app.getHttpServer())
@@ -221,29 +174,6 @@ describe('Mentorship Flow (e2e)', () => {
         .expect(200)
 
       expect(response.body).toHaveProperty('mentors')
-    })
-  })
-
-  describe('Recommendations', () => {
-    it('should get recommendations', async () => {
-      const response = await request(app.getHttpServer())
-        .get('/recommendations')
-        .set('Authorization', `Bearer ${studentToken}`)
-        .expect(200)
-
-      expect(response.body).toHaveProperty('recommendations')
-      expect(response.body).toHaveProperty('total')
-      expect(response.body).toHaveProperty('strategy')
-    })
-
-    it('should get recommendations with minimum score filter', async () => {
-      const response = await request(app.getHttpServer())
-        .get('/recommendations')
-        .query({ minScore: 30 })
-        .set('Authorization', `Bearer ${studentToken}`)
-        .expect(200)
-
-      expect(response.body).toHaveProperty('recommendations')
     })
   })
 

@@ -21,10 +21,8 @@ import { MentorProfilesModule } from './modules/mentor-profiles/mentor-profiles.
 import { MentorshipRequestsModule } from './modules/mentorship-requests/mentorship-requests.module'
 import { MentorshipsModule } from './modules/mentorships/mentorships.module'
 import { NotificationsModule } from './modules/notifications/notifications.module'
-import { RecommendationsModule } from './modules/recommendations/recommendations.module'
 import { RoadmapsModule } from './modules/roadmaps/roadmaps.module'
 import { SchedulerModule } from './modules/scheduler/scheduler.module'
-import { StudentPreferencesModule } from './modules/student-preferences/student-preferences.module'
 import { UsersModule } from './modules/users/users.module'
 
 @Module({
@@ -64,8 +62,6 @@ import { UsersModule } from './modules/users/users.module'
     NotificationsModule,
     MentorApplicationsModule,
     MentorProfilesModule,
-    StudentPreferencesModule,
-    RecommendationsModule,
     MentorshipRequestsModule,
     MentorshipsModule,
     SchedulerModule,

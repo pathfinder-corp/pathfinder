@@ -29,21 +29,18 @@ type GenerationSettings = Pick<
   'temperature' | 'topP' | 'topK' | 'maxOutputTokens'
 >
 
-const RESULTS_SYSTEM_PROMPT = `You are an expert educational mentor analyzing assessment performance. Provide constructive, encouraging, and actionable feedback that helps learners understand their strengths and areas for improvement.
+const ASSESSMENT_FEEDBACK_SYSTEM_PROMPT = `You are an expert educational mentor analyzing assessment performance. Provide constructive, encouraging, and actionable feedback that helps learners understand their strengths and areas for improvement.
 
 Rules:
 - Always respond with valid JSON that matches the provided schema.
+- Do not use Markdown formatting, code blocks, or any special formatting in your response.
+- Return only pure JSON without any surrounding text or formatting markers.
 - Be specific about what the learner did well and where they need work.
-- Provide concrete study recommendations tailored to the weak areas.
 - Be encouraging but honest about performance.
-- Focus on educational growth and learning strategies.`
-
-const ROADMAP_SUGGESTION_PROMPT = `You are an expert educational advisor. Based on assessment results, suggest relevant learning roadmap topics that would help the learner improve in their weak areas.
-
-Rules:
-- Always respond with valid JSON that matches the provided schema.
-- Suggest 6-8 specific, actionable roadmap topics.
-- Focus on the weakest areas that need the most improvement.`
+- Focus on educational growth and learning strategies.
+- For scores 90% or above, omit roadmap suggestions (set to null).
+- Decline any request that is not focused on educational assessment or that touches sensitive or harmful topics (violence, weapons, self-harm, adult content, hate, or illegal activities). Respond with: "I'm sorry, but I can only help with educational assessments."
+- Never produce content that facilitates dangerous, hateful, or illegal activities.`
 
 @Injectable()
 export class AssessmentResultsService {
@@ -125,19 +122,9 @@ export class AssessmentResultsService {
     const totalQuestions = assessment.questionCount
     const score = (correctCount / totalQuestions) * 100
 
-    // Generate AI summary
-    const summary = await this.generatePerformanceSummary(
-      assessment,
-      responses,
-      score
-    )
-
-    // Generate roadmap suggestions
-    const suggestedRoadmaps = await this.generateRoadmapSuggestions(
-      assessment,
-      responses,
-      score
-    )
+    // Generate AI feedback (summary + roadmap suggestions)
+    const { summary, suggestedRoadmaps } =
+      await this.generateAssessmentFeedback(assessment, responses, score)
 
     // Save results
     const result = this.resultsRepository.create({
@@ -198,16 +185,21 @@ export class AssessmentResultsService {
     return this.toResultResponse(result, assessment, responses)
   }
 
-  private async generatePerformanceSummary(
+  private async generateAssessmentFeedback(
     assessment: Assessment,
     responses: AssessmentResponse[],
     score: number
-  ): Promise<PerformanceSummary> {
+  ): Promise<{
+    summary: PerformanceSummary
+    suggestedRoadmaps: SuggestedRoadmap[] | null
+  }> {
     const incorrectQuestions = responses
       .filter((r) => !r.isCorrect)
       .map((r) => r.question.questionText)
 
-    const prompt = `Analyze this assessment performance and provide constructive feedback.
+    const includeRoadmaps = score < 90
+
+    const prompt = `Analyze this assessment performance and provide constructive, encouraging, and actionable feedback.
 
 Assessment Domain: ${assessment.domain}
 Difficulty Level: ${assessment.difficulty}
@@ -222,15 +214,20 @@ Provide:
 2. Specific strengths demonstrated (array of 2-4 items)
 3. Areas needing improvement (array of 2-4 items, or empty if perfect score)
 4. Specific topics to review (array of 3-5 topics based on incorrect answers, or general topics for perfect scores)
-5. Study recommendations (array of 3-5 actionable study strategies)
+5. Concrete study recommendations tailored to the weak areas (array of 3-5 actionable study strategies)
+${includeRoadmaps ? `6. Suggested learning roadmap topics (array of 6-8 specific topics designed to strengthen the areas identified as weak based on the incorrect questions)` : '6. Suggested roadmaps (set to null since score is 90% or above)'}
+
 
 Output JSON schema:
 {
-  "overallAssessment": string,
-  "strengths": string[],
-  "weaknesses": string[],
-  "topicsToReview": string[],
-  "studyRecommendations": string[]
+  "summary": {
+    "overallAssessment": string,
+    "strengths": string[],
+    "weaknesses": string[],
+    "topicsToReview": string[],
+    "studyRecommendations": string[]
+  },
+  "suggestedRoadmaps": ${includeRoadmaps ? '[{ "topic": string }]' : 'null'}
 }
 
 Ensure all strings use double quotes and the JSON is strictly valid.`
@@ -242,7 +239,7 @@ Ensure all strings use double quotes and the JSON is strictly valid.`
         config: {
           ...this.generationDefaults,
           responseMimeType: 'application/json',
-          systemInstruction: RESULTS_SYSTEM_PROMPT
+          systemInstruction: ASSESSMENT_FEEDBACK_SYSTEM_PROMPT
         }
       })
 
@@ -255,90 +252,15 @@ Ensure all strings use double quotes and the JSON is strictly valid.`
       }
 
       const parsed = this.parseModelOutput(textResponse)
-      return this.validatePerformanceSummary(parsed)
+      return this.validateAssessmentFeedback(parsed)
     } catch (error) {
       this.logger.error(
-        'Failed to generate performance summary',
+        'Failed to generate assessment feedback',
         error instanceof Error ? error.stack : undefined
       )
 
-      // Fallback to basic summary
-      return this.generateBasicSummary(assessment, score)
-    }
-  }
-
-  private async generateRoadmapSuggestions(
-    assessment: Assessment,
-    responses: AssessmentResponse[],
-    score: number
-  ): Promise<SuggestedRoadmap[] | null> {
-    // Only suggest roadmaps if score is below 90%
-    if (score >= 90) {
-      return null
-    }
-
-    const incorrectQuestions = responses
-      .filter((r) => !r.isCorrect)
-      .map((r) => r.question.questionText)
-
-    const weakTopics = incorrectQuestions.slice(0, 5).join(', ')
-
-    const prompt = `Based on this assessment performance, suggest 6-8 learning roadmap topics that would help improve in the identified weak areas.
-
-Assessment Domain: ${assessment.domain}
-Score: ${score.toFixed(1)}%
-Weak Areas: ${weakTopics}
-
-For each suggested roadmap topic:
-- Provide a clear, specific topic title
-
-Output JSON schema:
-{
-  "roadmaps": [
-    {
-      "topic": string
-    }
-  ]
-}
-
-Ensure all strings use double quotes and the JSON is strictly valid.`
-
-    try {
-      const response = await this.client.models.generateContent({
-        model: this.modelName,
-        contents: prompt,
-        config: {
-          ...this.generationDefaults,
-          responseMimeType: 'application/json',
-          systemInstruction: ROADMAP_SUGGESTION_PROMPT
-        }
-      })
-
-      const textResponse = response.text?.trim()
-
-      if (!textResponse) {
-        return null
-      }
-
-      const parsed = this.parseModelOutput(textResponse)
-
-      if (
-        parsed &&
-        typeof parsed === 'object' &&
-        'roadmaps' in parsed &&
-        Array.isArray(parsed.roadmaps)
-      ) {
-        return parsed.roadmaps.slice(0, 8) as SuggestedRoadmap[]
-      }
-
-      return null
-    } catch (error) {
-      this.logger.error(
-        'Failed to generate roadmap suggestions',
-        error instanceof Error ? error.stack : undefined
-      )
-
-      return null
+      // Fallback to basic feedback
+      return this.generateBasicFeedback(assessment, score)
     }
   }
 
@@ -361,12 +283,22 @@ Ensure all strings use double quotes and the JSON is strictly valid.`
     }
   }
 
-  private validatePerformanceSummary(payload: unknown): PerformanceSummary {
+  private validateAssessmentFeedback(payload: unknown): {
+    summary: PerformanceSummary
+    suggestedRoadmaps: SuggestedRoadmap[] | null
+  } {
     if (!payload || typeof payload !== 'object') {
+      throw new InternalServerErrorException('Invalid feedback structure')
+    }
+
+    const feedback = payload as Record<string, unknown>
+
+    // Validate summary
+    if (!feedback.summary || typeof feedback.summary !== 'object') {
       throw new InternalServerErrorException('Invalid summary structure')
     }
 
-    const summary = payload as Record<string, unknown>
+    const summary = feedback.summary as Record<string, unknown>
 
     if (
       typeof summary.overallAssessment !== 'string' ||
@@ -378,22 +310,45 @@ Ensure all strings use double quotes and the JSON is strictly valid.`
       throw new InternalServerErrorException('Invalid summary structure')
     }
 
+    // Validate roadmaps (can be null or array)
+    let suggestedRoadmaps: SuggestedRoadmap[] | null = null
+
+    if (
+      feedback.suggestedRoadmaps !== null &&
+      feedback.suggestedRoadmaps !== undefined
+    ) {
+      if (!Array.isArray(feedback.suggestedRoadmaps)) {
+        throw new InternalServerErrorException('Invalid roadmaps structure')
+      }
+      suggestedRoadmaps = (feedback.suggestedRoadmaps as Array<unknown>).slice(
+        0,
+        8
+      ) as SuggestedRoadmap[]
+    }
+
     return {
-      overallAssessment: summary.overallAssessment,
-      strengths: summary.strengths as string[],
-      weaknesses: summary.weaknesses as string[],
-      topicsToReview: summary.topicsToReview as string[],
-      studyRecommendations: summary.studyRecommendations as string[]
+      summary: {
+        overallAssessment: summary.overallAssessment,
+        strengths: summary.strengths as string[],
+        weaknesses: summary.weaknesses as string[],
+        topicsToReview: summary.topicsToReview as string[],
+        studyRecommendations: summary.studyRecommendations as string[]
+      },
+      suggestedRoadmaps
     }
   }
 
-  private generateBasicSummary(
+  private generateBasicFeedback(
     assessment: Assessment,
     score: number
-  ): PerformanceSummary {
+  ): {
+    summary: PerformanceSummary
+    suggestedRoadmaps: SuggestedRoadmap[] | null
+  } {
     let overallAssessment = ''
     let strengths: string[] = []
     let weaknesses: string[] = []
+    let suggestedRoadmaps: SuggestedRoadmap[] | null = null
 
     if (score >= 90) {
       overallAssessment = `Excellent performance! You demonstrated strong mastery of ${assessment.domain}.`
@@ -402,16 +357,30 @@ Ensure all strings use double quotes and the JSON is strictly valid.`
         'Ability to apply concepts correctly'
       ]
       weaknesses = []
+      suggestedRoadmaps = null
     } else if (score >= 70) {
       overallAssessment = `Good performance overall. You have a solid understanding of ${assessment.domain} with some areas for improvement.`
       strengths = ['Good grasp of core concepts']
       weaknesses = ['Some gaps in understanding specific topics']
+      suggestedRoadmaps = [
+        { topic: `Advanced ${assessment.domain} concepts` },
+        { topic: 'Practice exercises and problem-solving' },
+        { topic: 'Real-world applications' },
+        { topic: 'Common pitfalls and best practices' }
+      ]
     } else if (score >= 50) {
       overallAssessment = `Fair performance. You have basic understanding of ${assessment.domain} but need more practice and study.`
       strengths = ['Basic familiarity with the domain']
       weaknesses = [
         'Significant gaps in knowledge',
         'Need more practice with core concepts'
+      ]
+      suggestedRoadmaps = [
+        { topic: `${assessment.domain} fundamentals` },
+        { topic: 'Core concepts and principles' },
+        { topic: 'Guided tutorials and examples' },
+        { topic: 'Practice problems with solutions' },
+        { topic: 'Common patterns and techniques' }
       ]
     } else {
       overallAssessment = `This assessment shows you need substantial study in ${assessment.domain}. Focus on building foundational knowledge.`
@@ -420,23 +389,34 @@ Ensure all strings use double quotes and the JSON is strictly valid.`
         'Major gaps in foundational knowledge',
         'Need comprehensive review of the domain'
       ]
+      suggestedRoadmaps = [
+        { topic: `Introduction to ${assessment.domain}` },
+        { topic: 'Basic terminology and concepts' },
+        { topic: 'Beginner-friendly resources' },
+        { topic: 'Step-by-step learning path' },
+        { topic: 'Foundational principles' },
+        { topic: 'Getting started guide' }
+      ]
     }
 
     return {
-      overallAssessment,
-      strengths,
-      weaknesses,
-      topicsToReview: [
-        `Review fundamental concepts in ${assessment.domain}`,
-        'Practice with similar questions',
-        'Study incorrect answers and explanations'
-      ],
-      studyRecommendations: [
-        'Review the explanations for incorrect answers',
-        'Use the provided learning resources',
-        'Take another practice assessment after studying',
-        'Focus on weak areas identified in the results'
-      ]
+      summary: {
+        overallAssessment,
+        strengths,
+        weaknesses,
+        topicsToReview: [
+          `Review fundamental concepts in ${assessment.domain}`,
+          'Practice with similar questions',
+          'Study incorrect answers and explanations'
+        ],
+        studyRecommendations: [
+          'Review the explanations for incorrect answers',
+          'Use the provided learning resources',
+          'Take another practice assessment after studying',
+          'Focus on weak areas identified in the results'
+        ]
+      },
+      suggestedRoadmaps
     }
   }
 

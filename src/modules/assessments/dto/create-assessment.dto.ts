@@ -33,13 +33,13 @@ export class CreateAssessmentDto {
   @ApiPropertyOptional({
     description: 'Number of questions to generate',
     minimum: 10,
-    maximum: 20,
+    maximum: 30,
     default: 15,
     example: 15
   })
   @IsOptional()
   @IsInt()
   @Min(10)
-  @Max(20)
+  @Max(30)
   questionCount?: number
 }
