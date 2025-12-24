@@ -430,20 +430,16 @@ export class MentorProfilesService {
       } as any)
     }
 
-    // Deactivate mentor profile and stop accepting mentees
-    await this.profileRepository.update(
-      { id: profile.id },
-      { isActive: false, isAcceptingMentees: false }
-    )
+    // Delete mentor profile completely
+    await this.profileRepository.remove(profile)
 
     await this.auditLogService.log({
       actorId: userId,
       action: 'mentor_withdrawn',
-      entityType: 'mentor_profile',
-      entityId: profile.id,
+      entityType: 'user',
+      entityId: userId,
       changes: {
-        isActive: false,
-        isAcceptingMentees: false
+        deletedAt: new Date().toISOString()
       }
     })
 
