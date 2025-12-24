@@ -55,13 +55,7 @@ export const envValidationSchema = Joi.object({
   REDIS_PASSWORD: Joi.string().allow('').default(''),
   REDIS_DB: Joi.number().default(0),
 
-  // Content Validation
-  CONTENT_VALIDATION_ENABLED: Joi.boolean().default(true),
-  MIN_CONTENT_QUALITY_SCORE: Joi.number().min(0).max(100).default(60),
-  SPAM_KEYWORDS: Joi.string()
-    .allow('')
-    .default('buy now,click here,limited offer'),
-
+  // Generative AI Configuration
   GENAI_API_KEY: Joi.string().required(),
   GENAI_MODEL: Joi.string().default('gemini-3-flash-preview'),
   GENAI_MAX_OUTPUT_TOKENS: Joi.number().min(64).max(65536).default(65536),

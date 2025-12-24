@@ -1,5 +1,4 @@
 import { Injectable, Logger } from '@nestjs/common'
-import { ConfigService } from '@nestjs/config'
 
 import { CreateApplicationDto } from '../dto/create-application.dto'
 
@@ -16,16 +15,12 @@ export class ContentValidatorService {
   private readonly spamKeywords: string[]
   private readonly minQualityScore: number
 
-  constructor(private readonly configService: ConfigService) {
-    const keywords = this.configService.get<string[]>(
-      'mentorship.contentValidation.spamKeywords',
-      []
-    )
+  constructor() {
+    const keywords = 'buy now,click here,limited offer'
+      .split(',')
+      .map((k) => k.trim())
     this.spamKeywords = keywords.map((k) => k.toLowerCase())
-    this.minQualityScore = this.configService.get<number>(
-      'mentorship.contentValidation.minQualityScore',
-      60
-    )
+    this.minQualityScore = 60
   }
 
   /**

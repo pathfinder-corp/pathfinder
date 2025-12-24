@@ -8,7 +8,7 @@ import {
 } from '@nestjs/common'
 import { ConfigService } from '@nestjs/config'
 import { InjectRepository } from '@nestjs/typeorm'
-import { Repository } from 'typeorm'
+import { MoreThanOrEqual, Repository } from 'typeorm'
 
 import { AuditLogService } from '../../common/services/audit-log.service'
 import { IpUtil } from '../../common/utils/ip.util'
@@ -89,7 +89,7 @@ export class MentorApplicationsService {
       const recentApplicationsFromIp = await this.applicationRepository.count({
         where: {
           ipHash,
-          createdAt: weekAgo as any // TypeORM MoreThan would be imported
+          createdAt: MoreThanOrEqual(weekAgo)
         }
       })
 
@@ -609,7 +609,7 @@ export class MentorApplicationsService {
       .having('COUNT(*) > 1')
       .orderBy('count', 'DESC')
       .limit(50)
-      .getRawMany()
+      .getRawMany<{ ipHash: string; count: string }>()
 
     return results.map((r) => ({
       ipHash: r.ipHash,

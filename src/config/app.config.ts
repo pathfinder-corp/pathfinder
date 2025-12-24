@@ -121,19 +121,7 @@ export default () => {
       ipBasedRateLimitPerWeek: parseIntSafe(
         process.env.IP_BASED_RATE_LIMIT_PER_WEEK,
         10
-      ),
-      contentValidation: {
-        enabled: parseBoolean(process.env.CONTENT_VALIDATION_ENABLED, true),
-        minQualityScore: parseIntSafe(
-          process.env.MIN_CONTENT_QUALITY_SCORE,
-          60
-        ),
-        spamKeywords: (
-          process.env.SPAM_KEYWORDS || 'buy now,click here,limited offer'
-        )
-          .split(',')
-          .map((k) => k.trim())
-      }
+      )
     },
     upload: {
       maxFileSizeBytes: parseIntSafe(
