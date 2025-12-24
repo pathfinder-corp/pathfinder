@@ -26,49 +26,73 @@ export class SearchMentorsQueryDto {
     description: 'Filter by expertise areas'
   })
   @IsOptional()
-  @Transform(({ value }) => (Array.isArray(value) ? value : value?.split(',')))
+  @Transform(({ value }): string[] =>
+    Array.isArray(value)
+      ? value
+      : typeof value === 'string'
+        ? value.split(',')
+        : []
+  )
   @IsArray()
   @IsString({ each: true })
   expertise?: string[]
 
   @ApiPropertyOptional({ type: [String], description: 'Filter by skills' })
   @IsOptional()
-  @Transform(({ value }) => (Array.isArray(value) ? value : value?.split(',')))
+  @Transform(({ value }): string[] =>
+    Array.isArray(value)
+      ? value
+      : typeof value === 'string'
+        ? value.split(',')
+        : []
+  )
   @IsArray()
   @IsString({ each: true })
   skills?: string[]
 
   @ApiPropertyOptional({ type: [String], description: 'Filter by industries' })
   @IsOptional()
-  @Transform(({ value }) => (Array.isArray(value) ? value : value?.split(',')))
+  @Transform(({ value }): string[] =>
+    Array.isArray(value)
+      ? value
+      : typeof value === 'string'
+        ? value.split(',')
+        : []
+  )
   @IsArray()
   @IsString({ each: true })
   industries?: string[]
 
   @ApiPropertyOptional({ type: [String], description: 'Filter by languages' })
   @IsOptional()
-  @Transform(({ value }) => (Array.isArray(value) ? value : value?.split(',')))
+  @Transform(({ value }): string[] =>
+    Array.isArray(value)
+      ? value
+      : typeof value === 'string'
+        ? value.split(',')
+        : []
+  )
   @IsArray()
   @IsString({ each: true })
   languages?: string[]
 
   @ApiPropertyOptional({ description: 'Minimum years of experience' })
   @IsOptional()
-  @Transform(({ value }) => parseInt(value, 10))
+  @Transform(({ value }) => parseInt(value as string, 10))
   @IsInt()
   @Min(0)
   minYearsExperience?: number
 
   @ApiPropertyOptional({ default: 1, minimum: 1 })
   @IsOptional()
-  @Transform(({ value }) => parseInt(value, 10))
+  @Transform(({ value }) => parseInt(value as string, 10))
   @IsInt()
   @Min(1)
   page?: number = 1
 
   @ApiPropertyOptional({ default: 20, minimum: 1, maximum: 100 })
   @IsOptional()
-  @Transform(({ value }) => parseInt(value, 10))
+  @Transform(({ value }) => parseInt(value as string, 10))
   @IsInt()
   @Min(1)
   @Max(100)

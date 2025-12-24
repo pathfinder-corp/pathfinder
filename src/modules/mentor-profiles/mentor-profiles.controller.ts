@@ -1,3 +1,5 @@
+import type { Response } from 'express'
+
 import {
   Body,
   Controller,
@@ -25,7 +27,6 @@ import {
   ApiTags
 } from '@nestjs/swagger'
 import { plainToInstance } from 'class-transformer'
-import type { Response } from 'express'
 import { memoryStorage } from 'multer'
 
 import { CurrentUser } from '../auth/decorators/current-user.decorator'
@@ -254,9 +255,7 @@ export class MentorProfilesController {
     const profile = await this.profilesService.findPublicProfile(id)
 
     // Get review stats
-    const reviewStats = await this.reviewsService.getReviewStats(
-      profile.userId
-    )
+    const reviewStats = await this.reviewsService.getReviewStats(profile.userId)
 
     const profileDto = plainToInstance(MentorProfileResponseDto, profile, {
       excludeExtraneousValues: true

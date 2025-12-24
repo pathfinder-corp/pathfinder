@@ -177,10 +177,7 @@ export class MentorProfilesService {
     const qb = this.profileRepository
       .createQueryBuilder('profile')
       .leftJoinAndSelect('profile.user', 'user')
-      .where('profile.is_active = true')
-      .andWhere('profile.is_accepting_students = true')
       .andWhere('user.role = :role', { role: UserRole.MENTOR })
-      .andWhere('user.status = :status', { status: 'active' })
 
     if (search) {
       qb.andWhere(
@@ -195,27 +192,47 @@ export class MentorProfilesService {
     }
 
     if (expertise && expertise.length > 0) {
-      qb.andWhere('profile.expertise && :expertise', {
-        expertise: JSON.stringify(expertise)
-      })
+      qb.andWhere(
+        expertise
+          .map((_, i) => `profile.expertise::text ILIKE :expertise${i}`)
+          .join(' OR '),
+        Object.fromEntries(
+          expertise.map((exp, i) => [`expertise${i}`, `%${exp}%`])
+        )
+      )
     }
 
     if (skills && skills.length > 0) {
-      qb.andWhere('profile.skills && :skills', {
-        skills: JSON.stringify(skills)
-      })
+      qb.andWhere(
+        skills
+          .map((_, i) => `profile.skills::text ILIKE :skill${i}`)
+          .join(' OR '),
+        Object.fromEntries(
+          skills.map((skill, i) => [`skill${i}`, `%${skill}%`])
+        )
+      )
     }
 
     if (industries && industries.length > 0) {
-      qb.andWhere('profile.industries && :industries', {
-        industries: JSON.stringify(industries)
-      })
+      qb.andWhere(
+        industries
+          .map((_, i) => `profile.industries::text ILIKE :industry${i}`)
+          .join(' OR '),
+        Object.fromEntries(
+          industries.map((ind, i) => [`industry${i}`, `%${ind}%`])
+        )
+      )
     }
 
     if (languages && languages.length > 0) {
-      qb.andWhere('profile.languages && :languages', {
-        languages: JSON.stringify(languages)
-      })
+      qb.andWhere(
+        languages
+          .map((_, i) => `profile.languages::text ILIKE :language${i}`)
+          .join(' OR '),
+        Object.fromEntries(
+          languages.map((lang, i) => [`language${i}`, `%${lang}%`])
+        )
+      )
     }
 
     if (minYearsExperience !== undefined) {
