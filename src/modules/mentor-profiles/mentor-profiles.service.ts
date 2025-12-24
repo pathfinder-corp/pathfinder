@@ -369,6 +369,32 @@ export class MentorProfilesService {
   }
 
   /**
+   * Delete mentor profile completely (used when admin removes mentor role)
+   */
+  async deleteProfile(userId: string, adminId?: string): Promise<void> {
+    const profile = await this.findByUserId(userId)
+
+    if (!profile) {
+      // Profile doesn't exist, nothing to delete
+      return
+    }
+
+    const profileId = profile.id
+
+    await this.profileRepository.remove(profile)
+
+    await this.auditLogService.log({
+      actorId: adminId ?? userId,
+      action: 'profile_deleted',
+      entityType: 'mentor_profile',
+      entityId: profileId,
+      changes: { deletedBy: adminId, deletedAt: new Date().toISOString() }
+    })
+
+    this.logger.log(`Deleted mentor profile for user ${userId}`)
+  }
+
+  /**
    * Mentor voluntarily withdraws from being a mentor.
    * - Requires no active mentorships as mentor.
    * - Demotes user role to STUDENT.

@@ -240,8 +240,8 @@ export class AdminMentorshipController {
     // Update user role back to student
     await this.usersService.update(userId, { role: UserRole.STUDENT } as any)
 
-    // Deactivate mentor profile
-    await this.mentorProfilesService.deactivateProfile(userId, admin.id)
+    // Delete mentor profile when role is revoked
+    await this.mentorProfilesService.deleteProfile(userId, admin.id)
 
     // Log audit
     await this.auditLogService.log({

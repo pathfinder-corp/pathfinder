@@ -178,7 +178,8 @@ export class AdminUsersService {
         previousRole === UserRole.MENTOR &&
         updatedUser.role !== UserRole.MENTOR
       ) {
-        await this.mentorProfilesService.deactivateProfile(
+        // Delete mentor profile when role is changed from MENTOR to another role
+        await this.mentorProfilesService.deleteProfile(
           updatedUser.id,
           currentUser.id
         )
