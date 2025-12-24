@@ -58,13 +58,6 @@ const SYSTEM_PROMPT = `You are an expert educational assessment creator. Generat
 
 Rules:
 - Always respond with valid JSON that matches the provided schema.
-- Each question must have exactly 4 answer options.
-- Only one option should be correct.
-- Questions should be clear, unambiguous, and fair.
-- Explanations should be detailed and educational.
-- Include 1-2 relevant learning resources per question when possible.
-- Distribute questions across different aspects of the domain.
-- Adjust difficulty appropriately: easy (fundamental concepts), medium (practical application), hard (advanced theory and edge cases).
 - Decline any request that is not focused on educational assessment or that touches sensitive or harmful topics (violence, weapons, self-harm, adult content, hate, or illegal activities). Respond with: "I'm sorry, but I can only help with educational assessments."
 - Never produce content that facilitates dangerous, hateful, or illegal activities.`
 
@@ -396,7 +389,8 @@ export class AssessmentsService {
       order: { attemptNumber: 'DESC' }
     })
 
-    const nextAttemptNumber = allAttempts.length > 0 ? allAttempts[0].attemptNumber + 1 : 2
+    const nextAttemptNumber =
+      allAttempts.length > 0 ? allAttempts[0].attemptNumber + 1 : 2
 
     // Create new assessment with same domain/difficulty but as a retake
     const newAssessment = this.assessmentsRepository.create({
@@ -451,8 +445,7 @@ export class AssessmentsService {
     }
 
     // Get the root assessment ID
-    const rootAssessmentId =
-      assessment.originalAssessmentId || assessment.id
+    const rootAssessmentId = assessment.originalAssessmentId || assessment.id
 
     // Find all attempts
     const allAttempts = await this.assessmentsRepository.find({
@@ -477,9 +470,7 @@ export class AssessmentsService {
     })
 
     // Create a map of assessment ID to result
-    const resultsMap = new Map(
-      results.map((r) => [r.assessmentId, r])
-    )
+    const resultsMap = new Map(results.map((r) => [r.assessmentId, r]))
 
     // Build attempt summaries
     const attemptSummaries: AssessmentAttemptSummaryDto[] = allAttempts.map(
@@ -552,14 +543,14 @@ Difficulty level: ${difficulty}
 ${difficultyDescriptions[difficulty]}
 
 Requirements:
-- Each question must have exactly 4 answer options
-- Only one option should be correct
+- Each question must have exactly 4 answer options. 
+- Only one option should be correct.
+- Questions should be clear, unambiguous, and fair. 
+- Distribute questions across different aspects and subtopics within the domain.
 - Options should be plain text WITHOUT any prefixes (no "A. ", "B. ", "1. ", "2. ", etc.)
-- Include a detailed explanation for why the correct answer is right
-- Suggest 1-2 relevant learning resources per question (with URLs when possible)
-- Distribute questions across different aspects and subtopics within the domain
-- Make distractors (incorrect options) plausible but clearly wrong
-- Ensure questions are clear, unambiguous, and fair
+- Include a detailed explanation for why the correct answer is right. 
+- Explanations should be detailed and educational.
+- Make distractors (incorrect options) plausible but clearly wrong.
 
 Output JSON schema:
 {
@@ -570,15 +561,7 @@ Output JSON schema:
       "questionText": string,
       "options": [string, string, string, string],
       "correctAnswerIndex": number (0-3),
-      "explanation": string,
-      "resources": [
-        {
-          "type": string,
-          "title": string,
-          "url": string | null,
-          "description": string | null
-        }
-      ] | null
+      "explanation": string
     }
   ]
 }
