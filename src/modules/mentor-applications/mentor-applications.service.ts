@@ -487,7 +487,7 @@ export class MentorApplicationsService {
       application.status !== ApplicationStatus.UNDER_REVIEW
     ) {
       throw new BadRequestException(
-        'Can only withdraw pending or under-review applications'
+        'Can only withdraw pending or under review applications'
       )
     }
 
@@ -654,13 +654,13 @@ export class MentorApplicationsService {
             applicationId,
             previousStatus: ApplicationStatus.PENDING,
             newStatus: ApplicationStatus.FLAGGED,
-            changedBy: 'system',
+            changedBy: undefined,
             reason: `AI validation flagged application: ${validationResult.aiAnalysis.reasoning}`
           })
 
           // Log audit
           await this.auditLogService.log({
-            actorId: 'system',
+            actorId: null,
             action: 'application_ai_flagged',
             entityType: 'mentor_application',
             entityId: applicationId,

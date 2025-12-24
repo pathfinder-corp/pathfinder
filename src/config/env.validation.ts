@@ -110,7 +110,7 @@ export const envValidationSchema = Joi.object({
     .default(15),
   CONTENT_VALIDATION_WEIGHT_GIBBERISH: Joi.number().min(0).max(100).default(30),
   CONTENT_VALIDATION_WEIGHT_TOO_SHORT: Joi.number().min(0).max(100).default(20),
-  CONTENT_VALIDATION_WEIGHT_AI_SPAM: Joi.number().min(0).max(100).default(40),
+  CONTENT_VALIDATION_WEIGHT_AI_SPAM: Joi.number().min(0).max(100).default(41),
   CONTENT_VALIDATION_WEIGHT_SENSITIVE_CONTENT: Joi.number()
     .min(0)
     .max(100)

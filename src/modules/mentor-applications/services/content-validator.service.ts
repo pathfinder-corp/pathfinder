@@ -179,7 +179,7 @@ export class ContentValidatorService {
       syncResult.aiAnalysis = aiAnalysisResult
       if (aiAnalysisResult.isSpam) {
         finalFlags.push('ai-spam-detected')
-        finalScore -= this.weights.aiSpamDetection || 40
+        finalScore -= this.weights.aiSpamDetection || 41
         finalScore = Math.max(0, finalScore)
       }
     }
@@ -196,6 +196,8 @@ export class ContentValidatorService {
       reason,
       aiAnalysis: syncResult.aiAnalysis
     }
+
+    console.log('Final Validation Result:', result)
 
     // Cache the result
     await this.cacheValidation(contentHash, result)
@@ -220,21 +222,27 @@ export class ContentValidatorService {
     }
 
     try {
-      const prompt = `Analyze the following mentor application content for spam, inappropriate content, or low-quality submissions.
+      const prompt = `Analyze the following mentor application content to determine if it represents a legitimate, professional mentor candidate.
 
-Content:
-Headline: ${dto.headline}
-Bio: ${dto.bio}
-Motivation: ${dto.motivation}
-Expertise: ${dto.expertise?.join(', ') || 'N/A'}
-Skills: ${dto.skills?.join(', ') || 'N/A'}
+    Evaluate for:
+    1. Professional credibility and genuine expertise
+    2. Spam, promotional content, or low-quality submissions
+    3. Inappropriate, offensive, or unprofessional content
+    4. Authentic motivation to mentor (not self-promotion or sales)
 
-Respond in JSON format:
-{
-  "isSpam": boolean,
-  "confidence": number (0-1),
-  "reasoning": "brief explanation"
-}`
+    Content:
+    Headline: ${dto.headline}
+    Bio: ${dto.bio}
+    Motivation: ${dto.motivation}
+    Expertise: ${dto.expertise?.join(', ') || 'N/A'}
+    Skills: ${dto.skills?.join(', ') || 'N/A'}
+
+    Respond in JSON format:
+    {
+      "isSpam": boolean (true if content is spam, inappropriate, or unprofessional),
+      "confidence": number (0-1),
+      "reasoning": "brief explanation of why this is or isn't a professional mentor application"
+    }`
 
       const response = await this.genaiClient.models.generateContent({
         model: this.genaiModel,
@@ -242,17 +250,19 @@ Respond in JSON format:
         config: {
           temperature: 0.3,
           topP: 0.9,
-          maxOutputTokens: 500,
+          maxOutputTokens: 2048,
           responseMimeType: 'application/json'
         }
       })
 
       const textResponse = response.text?.trim()
+
       if (!textResponse) {
         return null
       }
 
       const parsed = JSON.parse(textResponse) as Record<string, unknown>
+
       return {
         isSpam: Boolean(parsed.isSpam),
         confidence: Number(parsed.confidence) || 0,

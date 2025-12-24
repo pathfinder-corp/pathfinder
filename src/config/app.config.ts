@@ -178,7 +178,7 @@ export default () => {
         ),
         aiSpamDetection: parseIntSafe(
           process.env.CONTENT_VALIDATION_WEIGHT_AI_SPAM,
-          40
+          41
         ),
         sensitiveContent: parseIntSafe(
           process.env.CONTENT_VALIDATION_WEIGHT_SENSITIVE_CONTENT,
