@@ -1,4 +1,3 @@
-import { GoogleGenAI, type GenerationConfig } from '@google/genai'
 import {
   BadRequestException,
   Injectable,
@@ -11,6 +10,7 @@ import { InjectRepository } from '@nestjs/typeorm'
 import { plainToInstance } from 'class-transformer'
 import { Repository } from 'typeorm'
 
+import { GenAIClientWrapperService } from '../../common/services/genai-client-wrapper.service'
 import {
   AssessmentResultResponseDto,
   QuestionBreakdownDto
@@ -23,11 +23,6 @@ import {
   SuggestedRoadmap
 } from './entities/assessment-result.entity'
 import { Assessment, AssessmentStatus } from './entities/assessment.entity'
-
-type GenerationSettings = Pick<
-  GenerationConfig,
-  'temperature' | 'topP' | 'topK' | 'maxOutputTokens'
->
 
 const ASSESSMENT_FEEDBACK_SYSTEM_PROMPT = `You are an expert educational mentor analyzing assessment performance. Provide constructive, encouraging, and actionable feedback that helps learners understand their strengths and areas for improvement.
 
@@ -45,12 +40,10 @@ Rules:
 @Injectable()
 export class AssessmentResultsService {
   private readonly logger = new Logger(AssessmentResultsService.name)
-  private readonly client: GoogleGenAI
-  private readonly modelName: string
-  private readonly generationDefaults: GenerationSettings
 
   constructor(
     private readonly configService: ConfigService,
+    private readonly genaiClient: GenAIClientWrapperService,
     @InjectRepository(Assessment)
     private readonly assessmentsRepository: Repository<Assessment>,
     @InjectRepository(AssessmentQuestion)
@@ -59,25 +52,7 @@ export class AssessmentResultsService {
     private readonly responsesRepository: Repository<AssessmentResponse>,
     @InjectRepository(AssessmentResult)
     private readonly resultsRepository: Repository<AssessmentResult>
-  ) {
-    const apiKey = this.configService.get<string>('genai.apiKey')
-
-    if (!apiKey) {
-      throw new Error('GENAI_API_KEY is not configured.')
-    }
-
-    this.client = new GoogleGenAI({ apiKey })
-    this.modelName =
-      this.configService.get<string>('genai.model') ?? 'gemini-3-flash-preview'
-
-    this.generationDefaults = {
-      temperature: 0.5,
-      topP: 0.9,
-      topK: 64,
-      maxOutputTokens:
-        this.configService.get<number>('genai.maxOutputTokens') ?? 65536
-    }
-  }
+  ) {}
 
   async completeAssessment(
     userId: string,
@@ -233,15 +208,20 @@ Output JSON schema:
 Ensure all strings use double quotes and the JSON is strictly valid.`
 
     try {
-      const response = await this.client.models.generateContent({
-        model: this.modelName,
-        contents: prompt,
-        config: {
-          ...this.generationDefaults,
-          responseMimeType: 'application/json',
-          systemInstruction: ASSESSMENT_FEEDBACK_SYSTEM_PROMPT
-        }
-      })
+      const response = await this.genaiClient.generateContent(
+        {
+          model: this.genaiClient.getModelName(),
+          contents: prompt,
+          config: {
+            ...this.genaiClient.getGenerationDefaults(),
+            responseMimeType: 'application/json',
+            systemInstruction: ASSESSMENT_FEEDBACK_SYSTEM_PROMPT
+          }
+        },
+        'assessments',
+        'generate_feedback',
+        undefined
+      )
 
       const textResponse = response.text?.trim()
 

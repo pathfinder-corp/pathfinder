@@ -2,6 +2,7 @@ import { Module } from '@nestjs/common'
 import { TypeOrmModule } from '@nestjs/typeorm'
 
 import { AuditLog } from '../../common/entities/audit-log.entity'
+import { GenAIApiUsage } from '../../common/entities/genai-api-usage.entity'
 import { AssessmentResponse } from '../assessments/entities/assessment-response.entity'
 import { AssessmentResult } from '../assessments/entities/assessment-result.entity'
 import { Assessment } from '../assessments/entities/assessment.entity'
@@ -21,6 +22,7 @@ import { AdminDashboardController } from './controllers/admin-dashboard.controll
 import { AdminMentorshipController } from './controllers/admin-mentorship.controller'
 import { AdminRoadmapsController } from './controllers/admin-roadmaps.controller'
 import { AdminUsersController } from './controllers/admin-users.controller'
+import { GenAIUsageController } from './controllers/genai-usage.controller'
 import { AdminAssessmentsService } from './services/admin-assessments.service'
 import { AdminContactService } from './services/admin-contact.service'
 import { AdminRoadmapsService } from './services/admin-roadmaps.service'
@@ -37,7 +39,8 @@ import { AdminUsersService } from './services/admin-users.service'
       AssessmentResponse,
       AssessmentResult,
       AuditLog,
-      ContactMessage
+      ContactMessage,
+      GenAIApiUsage
     ]),
     UsersModule,
     MailModule,
@@ -52,7 +55,8 @@ import { AdminUsersService } from './services/admin-users.service'
     AdminRoadmapsController,
     AdminAssessmentsController,
     AdminMentorshipController,
-    AdminContactController
+    AdminContactController,
+    GenAIUsageController
   ],
   providers: [
     AdminStatsService,

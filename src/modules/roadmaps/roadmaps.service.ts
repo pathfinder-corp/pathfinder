@@ -1,4 +1,3 @@
-import { GoogleGenAI, type GenerationConfig } from '@google/genai'
 import {
   BadRequestException,
   Injectable,
@@ -11,6 +10,7 @@ import { InjectRepository } from '@nestjs/typeorm'
 import { instanceToPlain, plainToInstance } from 'class-transformer'
 import { In, Repository } from 'typeorm'
 
+import { GenAIClientWrapperService } from '../../common/services/genai-client-wrapper.service'
 import { User, UserRole } from '../users/entities/user.entity'
 import {
   ExperienceLevel,
@@ -36,11 +36,6 @@ import {
 } from './entities/roadmap.entity'
 import { RoadmapContentPolicyService } from './roadmap-content-policy.service'
 
-type GenerationSettings = Pick<
-  GenerationConfig,
-  'temperature' | 'topP' | 'topK' | 'maxOutputTokens'
->
-
 type RoadmapContentPlain = {
   topic: string
   experienceLevel?: ExperienceLevel | null
@@ -53,9 +48,16 @@ type RoadmapContentPlain = {
 
 const SYSTEM_PROMPT = `You are an expert academic and career advisor. Build comprehensive, actionable roadmaps that combine skill acquisition, experiential learning, and milestone tracking.
 
+IMPORTANT: Generate extremely detailed, thorough, and verbose roadmaps that maximize the use of available output tokens. Every phase, activity, milestone, and resource should include extensive descriptions, context, and actionable guidance.
+
 Rules:
 - Always respond with valid JSON that matches the provided schema.
 - Do not use Markdown formatting, code blocks, or any special formatting in your response.
+- BE MAXIMALLY DETAILED: Provide in-depth explanations for every phase, activity, and milestone. Include extensive context, rationale, learning objectives, expected outcomes, and practical tips.
+- For each activity: Include detailed descriptions (3-5 sentences minimum), specific resources with full context, time estimates, skill prerequisites, and expected learning outcomes.
+- For milestones: Provide comprehensive success criteria, validation methods, and detailed guidance on how to achieve them.
+- For resources: Include full descriptions of why each resource is valuable, what the learner will gain, and how it fits into the overall learning path.
+- Expand all sections to their maximum useful length while maintaining relevance and actionability.
 - Decline any request that is not focused on educational growth or that touches sensitive or harmful topics (violence, weapons, self-harm, adult content, hate, or illegal activities). Respond with: "I'm sorry, but I can only help with educational learning plans."
 - Never produce content that facilitates dangerous, hateful, or illegal activities.`
 
@@ -69,13 +71,10 @@ Safety rules:
 @Injectable()
 export class RoadmapsService {
   private readonly logger = new Logger(RoadmapsService.name)
-  private readonly client: GoogleGenAI
-  private readonly modelName: string
-  private readonly generationDefaults: GenerationSettings
-  private readonly insightGenerationDefaults: GenerationSettings
 
   constructor(
     private readonly configService: ConfigService,
+    private readonly genaiClient: GenAIClientWrapperService,
     @InjectRepository(Roadmap)
     private readonly roadmapsRepository: Repository<Roadmap>,
     @InjectRepository(RoadmapShare)
@@ -83,32 +82,7 @@ export class RoadmapsService {
     @InjectRepository(User)
     private readonly usersRepository: Repository<User>,
     private readonly contentPolicy: RoadmapContentPolicyService
-  ) {
-    const apiKey = this.configService.get<string>('genai.apiKey')
-
-    if (!apiKey) {
-      throw new Error('GENAI_API_KEY is not configured.')
-    }
-
-    this.client = new GoogleGenAI({ apiKey })
-    this.modelName =
-      this.configService.get<string>('genai.model') ?? 'gemini-3-flash-preview'
-
-    this.generationDefaults = {
-      temperature: 0.5,
-      topP: 0.9,
-      topK: 64,
-      maxOutputTokens:
-        this.configService.get<number>('genai.maxOutputTokens') ?? 65536
-    }
-
-    this.insightGenerationDefaults = {
-      temperature: 1,
-      topP: 0.95,
-      maxOutputTokens:
-        this.configService.get<number>('genai.maxOutputTokens') ?? 65536
-    }
-  }
+  ) {}
 
   async generateRoadmap(
     user: User,
@@ -119,15 +93,20 @@ export class RoadmapsService {
     const prompt = this.buildPrompt(generateRoadmapDto)
 
     try {
-      const response = await this.client.models.generateContent({
-        model: this.modelName,
-        contents: prompt,
-        config: {
-          ...this.generationDefaults,
-          responseMimeType: 'application/json',
-          systemInstruction: SYSTEM_PROMPT
-        }
-      })
+      const response = await this.genaiClient.generateContent(
+        {
+          model: this.genaiClient.getModelName(),
+          contents: prompt,
+          config: {
+            ...this.genaiClient.getGenerationDefaults(),
+            responseMimeType: 'application/json',
+            systemInstruction: SYSTEM_PROMPT
+          }
+        },
+        'roadmaps',
+        'generate_roadmap',
+        user.id
+      )
 
       const textResponse = response.text?.trim()
 
@@ -318,15 +297,20 @@ export class RoadmapsService {
     const prompt = this.buildInsightPrompt(roadmap, insightDto)
 
     try {
-      const response = await this.client.models.generateContent({
-        model: this.modelName,
-        contents: prompt,
-        config: {
-          ...this.insightGenerationDefaults,
-          responseMimeType: 'text/plain',
-          systemInstruction: INSIGHT_SYSTEM_PROMPT
-        }
-      })
+      const response = await this.genaiClient.generateContent(
+        {
+          model: this.genaiClient.getModelName(),
+          contents: prompt,
+          config: {
+            ...this.genaiClient.getInsightGenerationDefaults(),
+            responseMimeType: 'text/plain',
+            systemInstruction: INSIGHT_SYSTEM_PROMPT
+          }
+        },
+        'roadmaps',
+        'generate_insight',
+        userId
+      )
 
       const textResponse = response.text?.trim()
 
@@ -583,71 +567,105 @@ export class RoadmapsService {
 
     return `Create a personalized learning roadmap that helps the user achieve their stated goal.
 
-Context:
-${context.map((line) => `- ${line}`).join('\n')}
+    Context:
+    ${context.map((line) => `- ${line}`).join('\n')}
 
-Instructions:
-- Break the roadmap into 4-7 sequential phases (adjust based on topic complexity and timeframe).
-- Each phase must include 4-6 detailed steps that build upon each other progressively.
-- Structure phases from foundational concepts to advanced mastery, ensuring logical skill progression.
-- For each step:
-  * Write a clear, specific title that indicates what will be learned
-  * Provide a detailed description (2-4 sentences) explaining the learning objectives
-  * Include 3-5 concrete key activities the learner should complete to make learning actionable and measurable
-  * Add 2-3 diverse reputable resources (courses, books, documentation, tutorials, projects, articles, videos, interactive tools) when applicable
-  * Specify realistic estimated duration based on the learning pace
-  * Ensure each step has clear, actionable deliverables
-- Provide a comprehensive summary with:
-  * Recommended study cadence (e.g., "2-3 hours daily" or "10 hours per week")
-  * Total recommended duration for completing the entire roadmap
-  * 4-6 success tips tailored to the user's experience level and learning pace
-  * Additional notes about prerequisites, challenges, or career outcomes
-- Include 4-8 milestone checkpoints spread across the roadmap that demonstrate capability progression.
+    IMPORTANT: Generate an extremely comprehensive and detailed roadmap that maximizes the use of all available output tokens. Every section should be expansive, thorough, and provide substantial value.
 
-Output JSON schema:
-{
-  "topic": string,
-  "experienceLevel": "beginner" | "intermediate" | "advanced" | null,
-  "learningPace": "flexible" | "balanced" | "intensive" | null,
-  "timeframe": string | null,
-  "summary": {
-    "recommendedCadence": string | null,
-    "recommendedDuration": string | null,
-    "successTips": string[] | null,
-    "additionalNotes": string | null
-  },
-  "phases": [
+    Instructions:
+    - Break the roadmap into 4-8 sequential phases for comprehensive coverage.
+    - For each phase, provide COMPREHENSIVE information:
+      * A clear, descriptive title (8-12 words) that captures the phase's focus
+      * An extensive description (4-6 sentences) explaining what the phase covers, its importance, and how it fits in the overall journey
+      * Detailed outcome statement (2-3 sentences) describing what the learner will achieve by completing this phase
+      * Realistic estimated duration with justification
+      * 3-5 specific learning objectives that detail what skills, knowledge, or competencies will be gained
+      * 2-4 key skills that will be developed during this phase
+      * Prerequisites or recommended preparation before starting this phase (2-3 items)
+    - Each phase must include 4-8 detailed steps that build upon each other progressively.
+    - Structure phases from foundational concepts to advanced mastery, ensuring logical skill progression with clear prerequisites and dependencies.
+    - For each step, BE MAXIMALLY DETAILED:
+      * Write a clear, specific title that precisely indicates what will be learned (8-12 words)
+      * Provide an EXTENSIVE description (5-8 sentences minimum) that thoroughly explains:
+        - The core learning objectives and why they matter
+        - How this step connects to previous and subsequent steps
+        - What specific skills, concepts, or competencies will be developed
+        - Real-world applications and practical benefits
+        - Common pitfalls or challenges learners should be aware of
+      * Include 5-8 concrete, specific key activities with detailed explanations of what to do and expected outcomes
+      * Add 4-6 diverse, high-quality resources with COMPREHENSIVE descriptions:
+        - For each resource, explain in 2-3 sentences: what it covers, why it's valuable, what the learner will gain, and how it fits into the overall learning path
+        - Include varied resource types: interactive courses, textbooks, documentation, hands-on projects, video tutorials, articles, practice platforms, community forums
+        - Provide specific, actionable resource recommendations (actual course names, book titles, platforms)
+      * Specify realistic estimated duration with reasoning (e.g., "2-3 weeks assuming 10 hours/week because...")
+      * Include practical tips for success specific to this step
+      * Ensure each step has clear, measurable deliverables and success criteria
+    - Provide an EXTREMELY comprehensive summary with extensive detail:
+      * Recommended study cadence with detailed reasoning and flexibility options (3-4 sentences)
+      * Total recommended duration broken down by phase with justification
+      * 8-12 detailed success tips (each 2-3 sentences) covering:
+        - Study strategies and learning techniques
+        - Time management and consistency tips
+        - How to stay motivated and overcome challenges
+        - Community engagement and networking advice
+        - Tool and resource recommendations
+        - Practice and application strategies
+        - Progress tracking methods
+        - When and how to seek help
+      * Extensive additional notes (4-6 sentences) covering prerequisites, expected challenges, career outcomes, certification options, community resources, and next steps beyond the roadmap
+    - Include 6-12 comprehensive milestone checkpoints spread strategically across the roadmap:
+      * Each milestone should have a clear, specific title
+      * Success criteria should be detailed (3-5 specific, measurable criteria per milestone)
+      * Include guidance on how to validate achievement and what to do if struggling
+
+    Output JSON schema:
     {
-      "title": string,
-      "outcome": string,
-      "estimatedDuration": string | null,
-      "steps": [
+      "topic": string,
+      "experienceLevel": "beginner" | "intermediate" | "advanced" | null,
+      "learningPace": "flexible" | "balanced" | "intensive" | null,
+      "timeframe": string | null,
+      "summary": {
+        "recommendedCadence": string | null,
+        "recommendedDuration": string | null,
+        "successTips": string[] | null,
+        "additionalNotes": string | null
+      },
+      "phases": [
         {
           "title": string,
           "description": string,
+          "outcome": string,
           "estimatedDuration": string | null,
-          "keyActivities": string[] | null,
-          "resources": [
+          "objectives": string[] | null,
+          "keySkills": string[] | null,
+          "prerequisites": string[] | null,
+          "steps": [
             {
-              "type": string,
               "title": string,
-              "url": string | null,
-              "description": string | null
+              "description": string,
+              "estimatedDuration": string | null,
+              "keyActivities": string[] | null,
+              "resources": [
+                {
+                  "type": string,
+                  "title": string,
+                  "url": string | null,
+                  "description": string | null
+                }
+              ] | null
             }
-          ] | null
+          ]
         }
-      ]
+      ],
+      "milestones": [
+        {
+          "title": string,
+          "successCriteria": string
+        }
+      ] | null
     }
-  ],
-  "milestones": [
-    {
-      "title": string,
-      "successCriteria": string
-    }
-  ] | null
-}
 
-Ensure all strings use double quotes and the JSON is strictly valid.`
+    Ensure all strings use double quotes and the JSON is strictly valid.`
   }
 
   private parseModelOutput(payload: string): unknown {

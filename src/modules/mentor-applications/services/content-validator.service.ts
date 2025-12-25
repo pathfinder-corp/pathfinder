@@ -197,8 +197,6 @@ export class ContentValidatorService {
       aiAnalysis: syncResult.aiAnalysis
     }
 
-    console.log('Final Validation Result:', result)
-
     // Cache the result
     await this.cacheValidation(contentHash, result)
 

@@ -79,7 +79,7 @@ export default () => {
       db: parseIntSafe(process.env.REDIS_DB, 0)
     },
     genai: {
-      apiKey: process.env.GENAI_API_KEY ?? '',
+      apiKeys: process.env.GENAI_API_KEYS ?? '',
       model: process.env.GENAI_MODEL ?? 'gemini-3-flash-preview',
       maxOutputTokens: parseIntSafe(process.env.GENAI_MAX_OUTPUT_TOKENS, 65536)
     },

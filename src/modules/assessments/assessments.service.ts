@@ -1,4 +1,3 @@
-import { GoogleGenAI, type GenerationConfig } from '@google/genai'
 import {
   BadRequestException,
   Injectable,
@@ -11,6 +10,7 @@ import { InjectRepository } from '@nestjs/typeorm'
 import { plainToInstance } from 'class-transformer'
 import { Repository } from 'typeorm'
 
+import { GenAIClientWrapperService } from '../../common/services/genai-client-wrapper.service'
 import { User } from '../users/entities/user.entity'
 import { AssessmentContentPolicyService } from './assessment-content-policy.service'
 import {
@@ -34,11 +34,6 @@ import {
   AssessmentDifficulty,
   AssessmentStatus
 } from './entities/assessment.entity'
-
-type GenerationSettings = Pick<
-  GenerationConfig,
-  'temperature' | 'topP' | 'topK' | 'maxOutputTokens'
->
 
 type GeneratedQuestion = {
   questionText: string
@@ -64,12 +59,10 @@ Rules:
 @Injectable()
 export class AssessmentsService {
   private readonly logger = new Logger(AssessmentsService.name)
-  private readonly client: GoogleGenAI
-  private readonly modelName: string
-  private readonly generationDefaults: GenerationSettings
 
   constructor(
     private readonly configService: ConfigService,
+    private readonly genaiClient: GenAIClientWrapperService,
     @InjectRepository(Assessment)
     private readonly assessmentsRepository: Repository<Assessment>,
     @InjectRepository(AssessmentQuestion)
@@ -79,25 +72,7 @@ export class AssessmentsService {
     @InjectRepository(AssessmentResult)
     private readonly resultsRepository: Repository<AssessmentResult>,
     private readonly contentPolicy: AssessmentContentPolicyService
-  ) {
-    const apiKey = this.configService.get<string>('genai.apiKey')
-
-    if (!apiKey) {
-      throw new Error('GENAI_API_KEY is not configured.')
-    }
-
-    this.client = new GoogleGenAI({ apiKey })
-    this.modelName =
-      this.configService.get<string>('genai.model') ?? 'gemini-3-flash-preview'
-
-    this.generationDefaults = {
-      temperature: 0.5,
-      topP: 0.9,
-      topK: 64,
-      maxOutputTokens:
-        this.configService.get<number>('genai.maxOutputTokens') ?? 65536
-    }
-  }
+  ) {}
 
   async generateAssessment(
     user: User,
@@ -111,15 +86,20 @@ export class AssessmentsService {
     const prompt = this.buildPrompt(createDto.domain, difficulty, questionCount)
 
     try {
-      const response = await this.client.models.generateContent({
-        model: this.modelName,
-        contents: prompt,
-        config: {
-          ...this.generationDefaults,
-          responseMimeType: 'application/json',
-          systemInstruction: SYSTEM_PROMPT
-        }
-      })
+      const response = await this.genaiClient.generateContent(
+        {
+          model: this.genaiClient.getModelName(),
+          contents: prompt,
+          config: {
+            ...this.genaiClient.getGenerationDefaults(),
+            responseMimeType: 'application/json',
+            systemInstruction: SYSTEM_PROMPT
+          }
+        },
+        'assessments',
+        'generate_assessment',
+        user.id
+      )
 
       const textResponse = response.text?.trim()
 

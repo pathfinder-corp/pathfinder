@@ -56,7 +56,7 @@ export const envValidationSchema = Joi.object({
   REDIS_DB: Joi.number().default(0),
 
   // Generative AI Configuration
-  GENAI_API_KEY: Joi.string().required(),
+  GENAI_API_KEYS: Joi.string().required(),
   GENAI_MODEL: Joi.string().default('gemini-3-flash-preview'),
   GENAI_MAX_OUTPUT_TOKENS: Joi.number().min(64).max(65536).default(65536),
 
