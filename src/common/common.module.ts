@@ -4,9 +4,9 @@ import { TypeOrmModule } from '@nestjs/typeorm'
 import { AuditLog } from './entities/audit-log.entity'
 import { GenAIApiUsage } from './entities/genai-api-usage.entity'
 import { AuditLogService } from './services/audit-log.service'
-import { ImageKitService } from './services/imagekit.service'
-import { GenAIKeyManagerService } from './services/genai-key-manager.service'
 import { GenAIClientWrapperService } from './services/genai-client-wrapper.service'
+import { GenAIKeyManagerService } from './services/genai-key-manager.service'
+import { ImageKitService } from './services/imagekit.service'
 
 @Global()
 @Module({
@@ -15,13 +15,13 @@ import { GenAIClientWrapperService } from './services/genai-client-wrapper.servi
     AuditLogService,
     ImageKitService,
     GenAIKeyManagerService,
-    GenAIClientWrapperService,
+    GenAIClientWrapperService
   ],
   exports: [
     AuditLogService,
     ImageKitService,
     GenAIKeyManagerService,
-    GenAIClientWrapperService,
-  ],
+    GenAIClientWrapperService
+  ]
 })
 export class CommonModule {}

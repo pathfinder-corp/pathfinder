@@ -58,4 +58,3 @@ export class MentorReview {
   @UpdateDateColumn({ name: 'updated_at', type: 'timestamptz' })
   updatedAt: Date
 }
-

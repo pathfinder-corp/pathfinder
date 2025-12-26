@@ -39,4 +39,3 @@ export class CreateMentorReviewDto {
   @IsUUID()
   mentorshipId?: string
 }
-

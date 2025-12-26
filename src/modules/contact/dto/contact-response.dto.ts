@@ -54,7 +54,10 @@ export class ContactMessageResponseDto {
   @Expose()
   userId?: string
 
-  @ApiPropertyOptional({ type: ContactUserDto, description: 'User info if userId is provided' })
+  @ApiPropertyOptional({
+    type: ContactUserDto,
+    description: 'User info if userId is provided'
+  })
   @Expose()
   @Type(() => ContactUserDto)
   user?: ContactUserDto
@@ -76,7 +79,10 @@ export class ContactMessageResponseDto {
   @Expose()
   respondedBy?: string
 
-  @ApiPropertyOptional({ type: ContactUserDto, description: 'Admin user who responded' })
+  @ApiPropertyOptional({
+    type: ContactUserDto,
+    description: 'Admin user who responded'
+  })
   @Expose()
   @Type(() => ContactUserDto)
   respondedByUser?: ContactUserDto

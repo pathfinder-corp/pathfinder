@@ -2,12 +2,12 @@ import { BadRequestException, Injectable, Logger } from '@nestjs/common'
 import { InjectRepository } from '@nestjs/typeorm'
 import { Repository } from 'typeorm'
 
+import { CreateContactDto } from './dto/create-contact.dto'
 import {
   ContactMessage,
   ContactStatus,
   ContactType
 } from './entities/contact-message.entity'
-import { CreateContactDto } from './dto/create-contact.dto'
 
 @Injectable()
 export class ContactService {

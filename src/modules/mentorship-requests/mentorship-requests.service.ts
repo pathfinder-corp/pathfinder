@@ -52,7 +52,9 @@ export class MentorshipRequestsService {
     }
 
     if (!mentorProfile.isAcceptingStudents) {
-      throw new BadRequestException('Mentor is not currently accepting students')
+      throw new BadRequestException(
+        'Mentor is not currently accepting students'
+      )
     }
 
     // Check for existing pending request to same mentor
