@@ -8,6 +8,8 @@ import { Roadmap } from './entities/roadmap.entity'
 import { RoadmapContentPolicyService } from './roadmap-content-policy.service'
 import { RoadmapsController } from './roadmaps.controller'
 import { RoadmapsService } from './roadmaps.service'
+import { RoadmapsMapService } from './services/roadmaps.map.service'
+import { RoadmapsReduceService } from './services/roadmaps.reduce.service'
 
 @Module({
   imports: [
@@ -15,6 +17,11 @@ import { RoadmapsService } from './roadmaps.service'
     TypeOrmModule.forFeature([Roadmap, RoadmapShare, User])
   ],
   controllers: [RoadmapsController],
-  providers: [RoadmapsService, RoadmapContentPolicyService]
+  providers: [
+    RoadmapsService,
+    RoadmapContentPolicyService,
+    RoadmapsMapService,
+    RoadmapsReduceService
+  ]
 })
 export class RoadmapsModule {}

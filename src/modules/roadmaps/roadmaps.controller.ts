@@ -8,12 +8,14 @@ import {
   HttpStatus,
   Param,
   Post,
+  Query,
   UseGuards,
   UseInterceptors
 } from '@nestjs/common'
 import {
   ApiBearerAuth,
   ApiOperation,
+  ApiQuery,
   ApiResponse,
   ApiTags
 } from '@nestjs/swagger'
@@ -44,6 +46,13 @@ export class RoadmapsController {
   @ApiOperation({
     summary: 'Generate a personalized learning roadmap for a specified topic'
   })
+  @ApiQuery({
+    name: 'useMapReduce',
+    required: false,
+    type: Boolean,
+    description:
+      'Use MapReduce pattern for generation (faster, more resilient). Default: false for backward compatibility'
+  })
   @ApiResponse({
     status: 200,
     description: 'Roadmap generated successfully',
@@ -51,8 +60,20 @@ export class RoadmapsController {
   })
   async createRoadmap(
     @CurrentUser() user: User,
-    @Body() generateRoadmapDto: GenerateRoadmapDto
+    @Body() generateRoadmapDto: GenerateRoadmapDto,
+    @Query('useMapReduce') useMapReduce?: string
   ): Promise<RoadmapResponseDto> {
+    // Parse query param (can be 'true', '1', 'yes')
+    const shouldUseMapReduce =
+      useMapReduce === 'true' || useMapReduce === '1' || useMapReduce === 'yes'
+
+    if (shouldUseMapReduce) {
+      return await this.roadmapsService.generateRoadmapWithMapReduce(
+        user,
+        generateRoadmapDto
+      )
+    }
+
     return await this.roadmapsService.generateRoadmap(user, generateRoadmapDto)
   }
 

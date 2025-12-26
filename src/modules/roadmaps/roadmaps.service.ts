@@ -22,6 +22,10 @@ import {
   RoadmapInsightResponseDto
 } from './dto/roadmap-insight.dto'
 import {
+  PhaseGenerationContext,
+  PhaseGenerationResult
+} from './dto/roadmap-mapreduce.dto'
+import {
   RoadmapAccessType,
   RoadmapContentDto,
   RoadmapResponseDto
@@ -35,6 +39,8 @@ import {
   RoadmapSummary
 } from './entities/roadmap.entity'
 import { RoadmapContentPolicyService } from './roadmap-content-policy.service'
+import { RoadmapsMapService } from './services/roadmaps.map.service'
+import { RoadmapsReduceService } from './services/roadmaps.reduce.service'
 
 type RoadmapContentPlain = {
   topic: string
@@ -81,7 +87,9 @@ export class RoadmapsService {
     private readonly roadmapSharesRepository: Repository<RoadmapShare>,
     @InjectRepository(User)
     private readonly usersRepository: Repository<User>,
-    private readonly contentPolicy: RoadmapContentPolicyService
+    private readonly contentPolicy: RoadmapContentPolicyService,
+    private readonly mapService: RoadmapsMapService,
+    private readonly reduceService: RoadmapsReduceService
   ) {}
 
   async generateRoadmap(
@@ -169,6 +177,156 @@ export class RoadmapsService {
         'Unable to generate a roadmap at this time. Please try again later.'
       )
     }
+  }
+
+  /**
+   * Generate roadmap using MapReduce pattern
+   * Phases are generated sequentially with context from earlier phases
+   * Individual phase failures trigger retry instead of full regeneration
+   */
+  async generateRoadmapWithMapReduce(
+    user: User,
+    generateRoadmapDto: GenerateRoadmapDto,
+    totalPhases = 6
+  ): Promise<RoadmapResponseDto> {
+    this.contentPolicy.validateRoadmapRequest(generateRoadmapDto)
+
+    this.logger.log(
+      `Starting MapReduce roadmap generation for user ${user.id}, topic: ${generateRoadmapDto.topic}`
+    )
+
+    try {
+      // Step 1: Generate roadmap skeleton
+      this.logger.debug('Phase 1/3: Generating roadmap skeleton')
+      const skeleton = await this.mapService.generateSkeleton(
+        {
+          request: generateRoadmapDto,
+          totalPhases,
+          skeleton: undefined
+        },
+        user.id
+      )
+
+      // Update totalPhases from skeleton if different
+      const actualPhaseCount = skeleton.phaseOutlines.length
+      if (actualPhaseCount !== totalPhases) {
+        this.logger.debug(
+          `Skeleton suggested ${actualPhaseCount} phases instead of ${totalPhases}`
+        )
+      }
+
+      // Step 2: Map - Generate phases sequentially with context
+      this.logger.debug(
+        `Phase 2/3: Generating ${actualPhaseCount} phases sequentially`
+      )
+      const phaseResults: PhaseGenerationResult[] = []
+      const previousPhases: any[] = []
+
+      for (let i = 1; i <= actualPhaseCount; i++) {
+        const phaseResult = await this.generatePhaseWithRetry(
+          {
+            request: generateRoadmapDto,
+            phaseNumber: i,
+            totalPhases: actualPhaseCount,
+            previousPhases,
+            skeleton
+          },
+          user.id,
+          3 // Max retry attempts per phase
+        )
+
+        phaseResults.push(phaseResult)
+        previousPhases.push(phaseResult.phase)
+
+        this.logger.debug(
+          `Completed phase ${i}/${actualPhaseCount} (${phaseResult.retryCount} retries)`
+        )
+      }
+
+      // Step 3: Reduce - Combine phases and generate summary/milestones
+      this.logger.debug('Phase 3/3: Reducing phases into final roadmap')
+      const reducedRoadmap = await this.reduceService.reduceRoadmap(
+        generateRoadmapDto,
+        skeleton,
+        phaseResults,
+        user.id
+      )
+
+      // Step 4: Save to database
+      const savedRoadmap = await this.roadmapsRepository.save(
+        this.roadmapsRepository.create({
+          userId: user.id,
+          topic: generateRoadmapDto.topic,
+          experienceLevel: generateRoadmapDto.experienceLevel ?? null,
+          learningPace: generateRoadmapDto.learningPace ?? null,
+          timeframe: generateRoadmapDto.timeframe ?? null,
+          summary: reducedRoadmap.summary,
+          phases: reducedRoadmap.phases,
+          milestones: reducedRoadmap.milestones,
+          requestContext: this.buildRequestContext(generateRoadmapDto),
+          isSharedWithAll: false
+        })
+      )
+
+      // Attach user relation for response transformation
+      savedRoadmap.user = user
+
+      const totalTokens = phaseResults.reduce(
+        (sum, r) => sum + (r.tokensUsed || 0),
+        0
+      )
+      this.logger.log(
+        `MapReduce roadmap generation completed successfully (${totalTokens} total tokens, ${actualPhaseCount} phases)`
+      )
+
+      return this.toRoadmapResponse(savedRoadmap, RoadmapAccessType.OWNER)
+    } catch (error) {
+      this.logger.error(
+        'Failed to generate roadmap with MapReduce',
+        error instanceof Error ? error.stack : undefined
+      )
+
+      if (error instanceof InternalServerErrorException) {
+        throw error
+      }
+
+      throw new InternalServerErrorException(
+        'Unable to generate a roadmap at this time. Please try again later.'
+      )
+    }
+  }
+
+  /**
+   * Generate a single phase with automatic retry on failure
+   */
+  private async generatePhaseWithRetry(
+    context: PhaseGenerationContext,
+    userId: string,
+    maxRetries: number
+  ): Promise<PhaseGenerationResult> {
+    let lastError: Error | null = null
+
+    for (let attempt = 0; attempt < maxRetries; attempt++) {
+      try {
+        return await this.mapService.generatePhase(context, userId, attempt)
+      } catch (error) {
+        lastError = error as Error
+        this.logger.warn(
+          `Phase ${context.phaseNumber} generation attempt ${attempt + 1}/${maxRetries} failed: ${lastError.message}`
+        )
+
+        // Wait before retry (exponential backoff)
+        if (attempt < maxRetries - 1) {
+          const delayMs = Math.min(1000 * Math.pow(2, attempt), 5000)
+          await new Promise((resolve) => setTimeout(resolve, delayMs))
+        }
+      }
+    }
+
+    // All retries exhausted
+    throw new InternalServerErrorException(
+      `Failed to generate phase ${context.phaseNumber} after ${maxRetries} attempts: ${lastError?.message}`
+    )
   }
 
   async getUserRoadmaps(userId: string): Promise<RoadmapResponseDto[]> {
