@@ -154,7 +154,8 @@ export class AdminAssessmentsService {
         id: user.id,
         email: user.email,
         firstName: user.firstName,
-        lastName: user.lastName
+        lastName: user.lastName,
+        avatar: user.avatar
       },
       { excludeExtraneousValues: true }
     )

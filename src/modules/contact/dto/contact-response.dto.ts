@@ -3,6 +3,28 @@ import { Expose, Type } from 'class-transformer'
 
 import { ContactStatus, ContactType } from '../entities/contact-message.entity'
 
+export class ContactUserDto {
+  @ApiProperty()
+  @Expose()
+  id: string
+
+  @ApiProperty()
+  @Expose()
+  email: string
+
+  @ApiProperty()
+  @Expose()
+  firstName: string
+
+  @ApiProperty()
+  @Expose()
+  lastName: string
+
+  @ApiPropertyOptional({ description: 'User avatar URL' })
+  @Expose()
+  avatar?: string
+}
+
 export class ContactMessageResponseDto {
   @ApiProperty()
   @Expose()
@@ -32,6 +54,11 @@ export class ContactMessageResponseDto {
   @Expose()
   userId?: string
 
+  @ApiPropertyOptional({ type: ContactUserDto, description: 'User info if userId is provided' })
+  @Expose()
+  @Type(() => ContactUserDto)
+  user?: ContactUserDto
+
   @ApiProperty({ enum: ContactStatus })
   @Expose()
   status: ContactStatus
@@ -48,6 +75,11 @@ export class ContactMessageResponseDto {
   @ApiPropertyOptional()
   @Expose()
   respondedBy?: string
+
+  @ApiPropertyOptional({ type: ContactUserDto, description: 'Admin user who responded' })
+  @Expose()
+  @Type(() => ContactUserDto)
+  respondedByUser?: ContactUserDto
 
   @ApiProperty()
   @Expose()

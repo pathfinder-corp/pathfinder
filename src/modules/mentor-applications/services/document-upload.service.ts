@@ -142,11 +142,13 @@ export class DocumentUploadService {
       )
     }
 
-    // Can only upload to pending or under_review applications
+    // Can upload to pending, under_review, flagged, or approved applications
+    // Approved applications allow mentors to add documents to their profile
     if (
       application.status !== ApplicationStatus.PENDING &&
       application.status !== ApplicationStatus.UNDER_REVIEW &&
-      application.status !== ApplicationStatus.FLAGGED
+      application.status !== ApplicationStatus.FLAGGED &&
+      application.status !== ApplicationStatus.APPROVED
     ) {
       throw new BadRequestException(
         `Cannot upload documents to application with status: ${application.status}`
@@ -311,11 +313,14 @@ export class DocumentUploadService {
     }
 
     // Check application status
+    // Allow update for pending, under_review, flagged, or approved applications
+    // Approved applications allow mentors to manage documents in their profile
     if (
       document.application &&
       document.application.status !== ApplicationStatus.PENDING &&
       document.application.status !== ApplicationStatus.UNDER_REVIEW &&
-      document.application.status !== ApplicationStatus.FLAGGED
+      document.application.status !== ApplicationStatus.FLAGGED &&
+      document.application.status !== ApplicationStatus.APPROVED
     ) {
       throw new BadRequestException(
         'Cannot update documents for this application'
@@ -356,11 +361,14 @@ export class DocumentUploadService {
     }
 
     // Check application status
+    // Allow deletion for pending, under_review, flagged, or approved applications
+    // Approved applications allow mentors to manage documents in their profile
     if (
       document.application &&
       document.application.status !== ApplicationStatus.PENDING &&
       document.application.status !== ApplicationStatus.UNDER_REVIEW &&
-      document.application.status !== ApplicationStatus.FLAGGED
+      document.application.status !== ApplicationStatus.FLAGGED &&
+      document.application.status !== ApplicationStatus.APPROVED
     ) {
       throw new BadRequestException(
         'Cannot delete documents for this application'
