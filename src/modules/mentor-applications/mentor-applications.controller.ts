@@ -1,4 +1,5 @@
 import type { Response } from 'express'
+import type { Express } from 'express'
 
 import {
   BadRequestException,

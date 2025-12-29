@@ -1,3 +1,5 @@
+import type { Express } from 'express'
+
 import {
   ConflictException,
   ForbiddenException,

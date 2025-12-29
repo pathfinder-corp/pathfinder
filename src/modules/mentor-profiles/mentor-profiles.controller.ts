@@ -1,3 +1,4 @@
+import type { Express } from 'express'
 import type { Response } from 'express'
 
 import {
