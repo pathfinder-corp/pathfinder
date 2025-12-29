@@ -14,7 +14,11 @@ import { RoadmapsReduceService } from './services/roadmaps.reduce.service'
 @Module({
   imports: [
     ConfigModule,
-    TypeOrmModule.forFeature([Roadmap, RoadmapShare, User])
+    TypeOrmModule.forFeature([
+      Roadmap,
+      RoadmapShare,
+      User
+    ])
   ],
   controllers: [RoadmapsController],
   providers: [

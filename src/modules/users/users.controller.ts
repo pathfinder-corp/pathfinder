@@ -33,8 +33,14 @@ import { RolesGuard } from '../auth/guards/roles.guard'
 import { CreateUserDto } from './dto/create-user.dto'
 import { SearchUserDto, UserSearchResultDto } from './dto/search-user.dto'
 import { UpdateUserDto } from './dto/update-user.dto'
+import {
+  BadgeDto,
+  GamificationStatsDto,
+  LeaderboardEntryDto
+} from './dto/user-gamification.dto'
 import { UserResponseDto } from './dto/user-response.dto'
 import { User, UserRole } from './entities/user.entity'
+import { UserGamificationService } from './services/user-gamification.service'
 import { UsersService } from './users.service'
 
 @ApiTags('Users')
@@ -43,7 +49,10 @@ import { UsersService } from './users.service'
 @UseGuards(JwtAuthGuard, RolesGuard)
 @ApiBearerAuth()
 export class UsersController {
-  constructor(private readonly usersService: UsersService) {}
+  constructor(
+    private readonly usersService: UsersService,
+    private readonly gamificationService: UserGamificationService
+  ) {}
 
   @Get('search')
   @ApiOperation({ summary: 'Search for users by email' })
@@ -161,6 +170,48 @@ export class UsersController {
   ): Promise<UserResponseDto> {
     const updated = await this.usersService.updateAvatar(user.id, file)
     return this.toResponse(updated)
+  }
+
+  // ============================================
+  // Gamification Endpoints
+  // ============================================
+
+  @Get('me/gamification')
+  @ApiOperation({ summary: 'Get my gamification stats' })
+  @ApiResponse({
+    status: 200,
+    description: 'Gamification stats retrieved successfully',
+    type: GamificationStatsDto
+  })
+  async getMyGamification(
+    @CurrentUser() user: User
+  ): Promise<GamificationStatsDto> {
+    return await this.gamificationService.getUserStats(user.id)
+  }
+
+  @Get('me/badges')
+  @ApiOperation({ summary: 'Get my earned badges' })
+  @ApiResponse({
+    status: 200,
+    description: 'Badges retrieved successfully',
+    type: [BadgeDto]
+  })
+  async getMyBadges(@CurrentUser() user: User): Promise<BadgeDto[]> {
+    return await this.gamificationService.getUserBadges(user.id)
+  }
+
+  @Get('leaderboard')
+  @ApiOperation({ summary: 'Get the gamification leaderboard' })
+  @ApiResponse({
+    status: 200,
+    description: 'Leaderboard retrieved successfully',
+    type: [LeaderboardEntryDto]
+  })
+  async getLeaderboard(
+    @Query('limit') limit?: string
+  ): Promise<LeaderboardEntryDto[]> {
+    const limitNum = limit ? parseInt(limit, 10) : 10
+    return await this.gamificationService.getLeaderboard(limitNum)
   }
 
   private toResponse(user: User): UserResponseDto {

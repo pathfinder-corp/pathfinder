@@ -138,6 +138,10 @@ export class RoadmapsMapService {
       : 'No specific timeframe provided'
 
     return `You are an expert educational roadmap architect. Generate a high-level skeleton for a learning roadmap.
+    
+Rules:
+- Decline any request that is not focused on educational growth or that touches sensitive or harmful topics (violence, weapons, self-harm, adult content, hate, or illegal activities). Respond with: "I'm sorry, but I can only help with educational learning plans."
+- Never produce content that facilitates dangerous, hateful, or illegal activities.
 
 **Request Context:**
 - Topic: ${request.topic}
@@ -239,8 +243,23 @@ ${previousContext}
 **Output Format (JSON):**
 {
   "title": "Phase title (clear and engaging)",
+  "description": "Detailed description of this phase (2-4 sentences)",
   "outcome": "Specific learning outcome for this phase",
   "estimatedDuration": "Time estimate (e.g., '2-3 weeks', '40-50 hours')",
+  "objectives": [
+    "Objective 1",
+    "Objective 2",
+    "Objective 3"
+  ],
+  "keySkills" : [
+    "Skill 1",
+    "Skill 2",
+    "Skill 3"
+  ],
+  "prerequisites": [
+    "Prerequisite 1",
+    "Prerequisite 2"
+  ],
   "steps": [
     {
       "title": "Step title",
@@ -268,6 +287,10 @@ ${previousContext}
 6. Ensure logical progression within the phase
 7. Maintain consistency with ${previousPhases.length > 0 ? 'previous phases and' : ''} the terminology guide
 8. Align detail level with the user's experience level and learning pace
+9. An extensive description (4-6 sentences) explaining what the phase covers, its importance, and how it fits in the overall journey
+10. 3-5 specific learning objectives that detail what skills, knowledge, or competencies will be gained
+11. 2-4 key skills that will be developed during this phase
+12. Prerequisites or recommended preparation before starting this phase (2-3 items)
 
 Generate ONLY the JSON output, no additional text.`
   }

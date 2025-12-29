@@ -30,8 +30,12 @@ export type RoadmapStep = {
 
 export type RoadmapPhase = {
   title: string
+  description: string
   outcome: string
   estimatedDuration?: string | null
+  objectives?: string[] | null
+  keySkills?: string[] | null
+  prerequisites?: string[] | null
   steps: RoadmapStep[]
 }
 

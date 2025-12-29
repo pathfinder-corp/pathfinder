@@ -54,8 +54,6 @@ type RoadmapContentPlain = {
 
 const SYSTEM_PROMPT = `You are an expert academic and career advisor. Build comprehensive, actionable roadmaps that combine skill acquisition, experiential learning, and milestone tracking.
 
-IMPORTANT: Generate extremely detailed, thorough, and verbose roadmaps that maximize the use of available output tokens. Every phase, activity, milestone, and resource should include extensive descriptions, context, and actionable guidance.
-
 Rules:
 - Always respond with valid JSON that matches the provided schema.
 - Do not use Markdown formatting, code blocks, or any special formatting in your response.
@@ -727,8 +725,6 @@ export class RoadmapsService {
 
     Context:
     ${context.map((line) => `- ${line}`).join('\n')}
-
-    IMPORTANT: Generate an extremely comprehensive and detailed roadmap that maximizes the use of all available output tokens. Every section should be expansive, thorough, and provide substantial value.
 
     Instructions:
     - Break the roadmap into 4-8 sequential phases for comprehensive coverage.
