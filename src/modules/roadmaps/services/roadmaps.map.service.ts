@@ -153,7 +153,7 @@ Rules:
 - Preferences: ${request.preferences || 'Not specified'}
 
 **Task:**
-Generate a roadmap skeleton with ${totalPhases} distinct learning phases. This skeleton will guide the detailed expansion of each phase later.
+Generate a roadmap skeleton with 4-6 distinct learning phases. This skeleton will guide the detailed expansion of each phase later.
 
 **Output Format (JSON):**
 {
@@ -172,7 +172,7 @@ Generate a roadmap skeleton with ${totalPhases} distinct learning phases. This s
 }
 
 **Requirements:**
-1. Create ${totalPhases} progressive phases that build on each other
+1. Create 4-6 progressive phases that build on each other
 2. Each phase should have a clear, distinct focus area
 3. Outcomes should be specific and measurable
 4. Terminology should ensure consistency across all phases
@@ -347,8 +347,12 @@ Generate ONLY the JSON output, no additional text.`
 
       return {
         title: parsed.title as string,
+        description: parsed.description as string,
         outcome: parsed.outcome as string,
         estimatedDuration: (parsed.estimatedDuration as string) || null,
+        objectives: (parsed.objectives as string[]) || null,
+        keySkills: (parsed.keySkills as string[]) || null,
+        prerequisites: (parsed.prerequisites as string[]) || null,
         steps: parsed.steps as RoadmapPhase['steps']
       }
     } catch (error) {

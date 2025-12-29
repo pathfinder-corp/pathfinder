@@ -185,7 +185,7 @@ export class RoadmapsService {
   async generateRoadmapWithMapReduce(
     user: User,
     generateRoadmapDto: GenerateRoadmapDto,
-    totalPhases = 6
+    totalPhases = 4
   ): Promise<RoadmapResponseDto> {
     this.contentPolicy.validateRoadmapRequest(generateRoadmapDto)
 
