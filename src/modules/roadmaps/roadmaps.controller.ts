@@ -29,7 +29,11 @@ import {
   RoadmapInsightResponseDto
 } from './dto/roadmap-insight.dto'
 import { RoadmapResponseDto } from './dto/roadmap-response.dto'
-import { RoadmapShareStateDto, ShareRoadmapDto } from './dto/share-roadmap.dto'
+import {
+  AddShareUsersDto,
+  RoadmapShareStateDto,
+  ShareRoadmapDto
+} from './dto/share-roadmap.dto'
 import { SharedUserDto } from './dto/shared-user.dto'
 import { RoadmapsService } from './roadmaps.service'
 
@@ -222,7 +226,8 @@ export class RoadmapsController {
   @Post(':id/share')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({
-    summary: 'Share a roadmap with specific users or all registered users'
+    summary:
+      'Share a roadmap with specific users or all registered users (replaces existing shares)'
   })
   @ApiResponse({
     status: 200,
@@ -241,6 +246,29 @@ export class RoadmapsController {
     )
   }
 
+  @Post(':id/share/add')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: 'Add users to roadmap share list without removing existing shares'
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Users added to share list successfully',
+    type: RoadmapShareStateDto
+  })
+  @ApiResponse({ status: 404, description: 'Roadmap or users not found' })
+  async addShareUsers(
+    @CurrentUser() user: User,
+    @Param('id') roadmapId: string,
+    @Body() addShareDto: AddShareUsersDto
+  ): Promise<RoadmapShareStateDto> {
+    return await this.roadmapsService.addShareUsers(
+      user.id,
+      roadmapId,
+      addShareDto
+    )
+  }
+
   @Delete(':id/share/:userId')
   @HttpCode(HttpStatus.NO_CONTENT)
   @ApiOperation({ summary: 'Revoke roadmap access from a shared user' })
@@ -255,5 +283,4 @@ export class RoadmapsController {
   ): Promise<void> {
     await this.roadmapsService.revokeShare(user.id, roadmapId, sharedWithUserId)
   }
-
 }

@@ -109,11 +109,15 @@ export class MentorProfilesController {
 
     const mentorsWithStats = await Promise.all(
       mentors.map(async (m) => {
-        const reviewStats = await this.reviewsService.getReviewStats(m.userId)
+        const [reviewStats, totalStudents] = await Promise.all([
+          this.reviewsService.getReviewStats(m.userId),
+          this.profilesService.getTotalStudents(m.userId)
+        ])
         const mentorDto = plainToInstance(MentorProfileResponseDto, m, {
           excludeExtraneousValues: true
         })
         mentorDto.reviewStats = reviewStats
+        mentorDto.totalStudents = totalStudents
         return mentorDto
       })
     )
@@ -255,15 +259,19 @@ export class MentorProfilesController {
   ): Promise<MentorProfileResponseDto> {
     const profile = await this.profilesService.findPublicProfile(id)
 
-    // Get review stats
-    const reviewStats = await this.reviewsService.getReviewStats(profile.userId)
+    // Get review stats and total students in parallel
+    const [reviewStats, totalStudents] = await Promise.all([
+      this.reviewsService.getReviewStats(profile.userId),
+      this.profilesService.getTotalStudents(profile.userId)
+    ])
 
     const profileDto = plainToInstance(MentorProfileResponseDto, profile, {
       excludeExtraneousValues: true
     })
 
-    // Add review stats
+    // Add review stats and total students
     profileDto.reviewStats = reviewStats
+    profileDto.totalStudents = totalStudents
 
     return profileDto
   }
@@ -278,6 +286,11 @@ export class MentorProfilesController {
     const { profile, documents } =
       await this.profilesService.findPublicProfileWithDocuments(id)
 
+    const [reviewStats, totalStudents] = await Promise.all([
+      this.reviewsService.getReviewStats(profile.userId),
+      this.profilesService.getTotalStudents(profile.userId)
+    ])
+
     const result = plainToInstance(MentorProfileWithDocumentsDto, profile, {
       excludeExtraneousValues: true
     })
@@ -287,6 +300,9 @@ export class MentorProfilesController {
         excludeExtraneousValues: true
       })
     )
+
+    result.reviewStats = reviewStats
+    result.totalStudents = totalStudents
 
     return result
   }

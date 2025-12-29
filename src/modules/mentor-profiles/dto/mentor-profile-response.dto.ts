@@ -88,6 +88,13 @@ export class MentorProfileResponseDto {
   @Type(() => MentorReviewStatsDto)
   reviewStats?: MentorReviewStatsDto
 
+  @ApiPropertyOptional({
+    description:
+      'Total unique students who have ever had a mentorship with this mentor'
+  })
+  @Expose()
+  totalStudents?: number
+
   @ApiProperty()
   @Expose()
   @Type(() => Date)

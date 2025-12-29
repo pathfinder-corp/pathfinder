@@ -23,7 +23,7 @@ export class ShareRoadmapDto {
   @IsOptional()
   @IsArray()
   @ArrayUnique()
-  @Transform(({ value }) =>
+  @Transform(({ value }: { value: unknown }) =>
     Array.isArray(value) ? value.map((item) => String(item)) : value
   )
   @IsUUID('4', { each: true })
@@ -41,4 +41,22 @@ export class RoadmapShareStateDto {
     description: 'IDs of users who have explicit access to the shared roadmap'
   })
   sharedWithUserIds!: string[]
+}
+
+/**
+ * DTO for adding users to existing share list without removing current users
+ */
+export class AddShareUsersDto {
+  @ApiProperty({
+    type: [String],
+    description:
+      'IDs of users to add to the share list (existing shares are preserved)'
+  })
+  @IsArray()
+  @ArrayUnique()
+  @Transform(({ value }: { value: unknown }) =>
+    Array.isArray(value) ? value.map((item) => String(item)) : value
+  )
+  @IsUUID('4', { each: true })
+  userIds!: string[]
 }

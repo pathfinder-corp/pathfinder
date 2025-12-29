@@ -2,6 +2,7 @@ import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger'
 import { Expose, Transform, Type } from 'class-transformer'
 
 import { MentorUserDto } from './mentor-profile-response.dto'
+import { MentorReviewStatsDto } from './review-response.dto'
 
 /**
  * Helper functions for MIME type checking
@@ -210,6 +211,18 @@ export class MentorProfileWithDocumentsDto {
   @Expose()
   @Type(() => MentorDocumentDto)
   documents: MentorDocumentDto[]
+
+  @ApiPropertyOptional({ type: MentorReviewStatsDto })
+  @Expose()
+  @Type(() => MentorReviewStatsDto)
+  reviewStats?: MentorReviewStatsDto
+
+  @ApiPropertyOptional({
+    description:
+      'Total unique students who have ever had a mentorship with this mentor'
+  })
+  @Expose()
+  totalStudents?: number
 
   @ApiProperty()
   @Expose()

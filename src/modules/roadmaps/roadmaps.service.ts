@@ -30,7 +30,11 @@ import {
   RoadmapContentDto,
   RoadmapResponseDto
 } from './dto/roadmap-response.dto'
-import { RoadmapShareStateDto, ShareRoadmapDto } from './dto/share-roadmap.dto'
+import {
+  AddShareUsersDto,
+  RoadmapShareStateDto,
+  ShareRoadmapDto
+} from './dto/share-roadmap.dto'
 import { SharedUserDto } from './dto/shared-user.dto'
 import { RoadmapShare } from './entities/roadmap-share.entity'
 import {
@@ -587,6 +591,83 @@ export class RoadmapsService {
     }
 
     await this.roadmapsRepository.save(roadmap)
+
+    return await this.buildRoadmapShareState(roadmapId, roadmap.isSharedWithAll)
+  }
+
+  /**
+   * Add users to roadmap share list without removing existing shares
+   * This is safer for incremental sharing - won't accidentally remove existing users
+   */
+  async addShareUsers(
+    ownerId: string,
+    roadmapId: string,
+    dto: AddShareUsersDto
+  ): Promise<RoadmapShareStateDto> {
+    const roadmap = await this.roadmapsRepository.findOne({
+      where: { id: roadmapId, userId: ownerId }
+    })
+
+    if (!roadmap) {
+      throw new NotFoundException('Roadmap not found')
+    }
+
+    // Sanitize and filter out owner from the list
+    const sanitizedUserIds = Array.from(
+      new Set(
+        dto.userIds
+          .map((value) => value.trim())
+          .filter((id) => id && id !== ownerId)
+      )
+    )
+
+    if (dto.userIds.length > 0 && sanitizedUserIds.length === 0) {
+      throw new BadRequestException(
+        'At least one recipient must be a different user.'
+      )
+    }
+
+    if (sanitizedUserIds.length === 0) {
+      return await this.buildRoadmapShareState(
+        roadmapId,
+        roadmap.isSharedWithAll
+      )
+    }
+
+    // Verify all users exist
+    const users = await this.usersRepository.find({
+      where: { id: In(sanitizedUserIds) }
+    })
+
+    if (users.length !== sanitizedUserIds.length) {
+      throw new NotFoundException('One or more users could not be found.')
+    }
+
+    // Get existing shares to avoid duplicates
+    const existingShares = await this.roadmapSharesRepository.find({
+      where: { roadmapId },
+      select: ['sharedWithUserId']
+    })
+
+    const existingUserIds = new Set(
+      existingShares.map((share) => share.sharedWithUserId)
+    )
+
+    // Only add users that are not already shared with
+    const usersToAdd = sanitizedUserIds.filter(
+      (userId) => !existingUserIds.has(userId)
+    )
+
+    if (usersToAdd.length > 0) {
+      await this.roadmapSharesRepository.save(
+        usersToAdd.map((sharedWithUserId) =>
+          this.roadmapSharesRepository.create({
+            roadmapId,
+            sharedWithUserId
+          })
+        )
+      )
+    }
 
     return await this.buildRoadmapShareState(roadmapId, roadmap.isSharedWithAll)
   }

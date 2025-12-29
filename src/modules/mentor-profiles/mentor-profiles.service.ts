@@ -351,6 +351,20 @@ export class MentorProfilesService {
     return profile
   }
 
+  /**
+   * Get total unique students who have ever had a mentorship with a mentor
+   * Counts all mentorships regardless of status (active, ended, cancelled)
+   */
+  async getTotalStudents(mentorId: string): Promise<number> {
+    const result = await this.mentorshipRepository
+      .createQueryBuilder('mentorship')
+      .select('COUNT(DISTINCT mentorship.student_id)', 'count')
+      .where('mentorship.mentor_id = :mentorId', { mentorId })
+      .getRawOne<{ count: string }>()
+
+    return parseInt(result?.count ?? '0', 10)
+  }
+
   async deactivateProfile(userId: string, adminId?: string): Promise<void> {
     const profile = await this.findByUserId(userId)
 
@@ -531,12 +545,14 @@ export class MentorProfilesService {
   }
 
   /**
-   * Get approved application for mentor to add documents
+   * Get or create approved application for mentor to add documents
+   * This handles the case where admin directly sets mentor role without application process
    */
-  private async getApprovedApplication(
+  private async getOrCreateApprovedApplication(
     userId: string
   ): Promise<MentorApplication> {
-    const application = await this.applicationRepository.findOne({
+    // First, try to find an existing approved application
+    let application = await this.applicationRepository.findOne({
       where: {
         userId,
         status: ApplicationStatus.APPROVED
@@ -545,13 +561,58 @@ export class MentorProfilesService {
       order: { createdAt: 'DESC' }
     })
 
-    if (!application) {
+    if (application) {
+      return application
+    }
+
+    // If no approved application exists, create one for mentors set by admin
+    // Verify user is actually a mentor
+    const user = await this.usersService.findOne(userId)
+
+    if (user.role !== UserRole.MENTOR) {
       throw new NotFoundException(
         'No approved application found. Please contact support.'
       )
     }
 
-    return application
+    // Get mentor profile for application data
+    const profile = await this.findByUserId(userId)
+
+    // Create a new approved application (admin-granted mentor)
+    application = this.applicationRepository.create({
+      userId,
+      status: ApplicationStatus.APPROVED,
+      applicationData: {
+        headline: profile?.headline ?? '',
+        bio: profile?.bio ?? '',
+        expertise: profile?.expertise ?? [],
+        skills: profile?.skills ?? [],
+        industries: profile?.industries ?? [],
+        languages: profile?.languages ?? [],
+        yearsExperience: profile?.yearsExperience,
+        linkedinUrl: profile?.linkedinUrl,
+        portfolioUrl: profile?.portfolioUrl,
+        motivation: 'Admin-granted mentor role'
+      },
+      adminNotes: 'Auto-created application for admin-granted mentor role',
+      decidedAt: new Date()
+    })
+
+    const saved = await this.applicationRepository.save(application)
+
+    await this.auditLogService.log({
+      actorId: userId,
+      action: 'application_auto_created',
+      entityType: 'mentor_application',
+      entityId: saved.id,
+      changes: { reason: 'Admin-granted mentor role, no existing application' }
+    })
+
+    this.logger.log(
+      `Auto-created approved application for admin-granted mentor ${userId}`
+    )
+
+    return saved
   }
 
   /**
@@ -562,8 +623,8 @@ export class MentorProfilesService {
     file: Express.Multer.File,
     dto: UploadDocumentDto
   ): Promise<ApplicationDocument> {
-    // Get the approved application
-    const application = await this.getApprovedApplication(userId)
+    // Get or create approved application (handles admin-granted mentors)
+    const application = await this.getOrCreateApprovedApplication(userId)
 
     // Delegate to DocumentUploadService (which handles ImageKit upload)
     return this.documentUploadService.uploadDocument(
